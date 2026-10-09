@@ -58,7 +58,7 @@ set -e
 
 # this runs on exit if the installer is launched by a front-end app
 copy_log() {
-  rm -rf ${1-$id}[-_]*/ 2>/dev/null
+  rm -rf ${1-$id}[-_]*/ ACC-NG-*/ 2>/dev/null
   case "$PWD" in
     /data/data/*|/data/user/*)
       mkdir -p logs
@@ -71,16 +71,32 @@ copy_log() {
 trap copy_log EXIT
 
 # extract tarball
-rm -rf ${1:-$id}[-_]*/ 2>/dev/null
+rm -rf ${1:-$id}[-_]*/ ACC-NG-*/ 2>/dev/null
 test -f ${1:-$id}[-_]*.tar.gz && ext=tar.gz || ext=tgz
 tar -xf ${1:-$id}[-_]*.$ext
 unset ext
+
+# The bundled package uses acc-ng-*, while GitHub source archives use ACC-NG-*.
+# Accept only one source with our API marker; never select an upstream archive.
+select_source() {
+  local candidate= selected=
+  for candidate in acc[-_]*/ ACC-NG-*/; do
+    [ -f "${candidate}module.prop" ] || continue
+    [ "$(sed -n 's/^ngApiVersion=//p' "${candidate}module.prop")" = 1 ] || continue
+    [ -f "${candidate}install.sh" ] || continue
+    [ -z "$selected" ] || return 1
+    selected=${candidate%/}
+  done
+  [ -n "$selected" ] || return 1
+  printf '%s' "$selected"
+}
+src_dir=$(select_source) || exit 5
 
 # prevent frontends from downgrading/reinstalling modules
 case "$PWD" in
   /data/data/*|/data/user/*)
     get_ver() { sed -n '/^versionCode=/s/.*=//p' ${1}module.prop 2>/dev/null || echo 0; }
-    bundled_ver=$(get_ver ${1:-$id}[-_]*/)
+    bundled_ver=$(get_ver "$src_dir/")
     regular_ver=$(get_ver /data/adb/$domain/${1:-$id}/)
     if [ "$(sed -n 's/^ngApiVersion=//p' /data/adb/$domain/${1:-$id}/module.prop 2>/dev/null)" = 1 ] && [ $bundled_ver -le $regular_ver ] && [ $regular_ver -ne 0 ]; then
       ln -sfn $(readlink -f /data/adb/$domain/${1:-$id}) .
@@ -92,6 +108,6 @@ esac
 # install ${1:-$id}
 export ACCA_FILES="$PWD"
 export installDir="${2:-$PWD}"
-/system/bin/sh ${1:-$id}[-_]*/install.sh
+/system/bin/sh "$src_dir/install.sh"
 
 exit 0

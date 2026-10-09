@@ -1,3 +1,9 @@
+v1.0.1-ng (202610091)
+
+- Accept both bundled acc-ng-* and GitHub ACC-NG-* source archive folders.
+- Validate the NG API marker before selecting/installing source.
+- Fix the source-directory name used by the online updater.
+
 v1.0.0-ng (202610090)
 
 - First ACC-NG engine for AccA-NG, based on ACC v2023.10.16.

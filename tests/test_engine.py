@@ -71,6 +71,21 @@ class EngineTests(unittest.TestCase):
         self.assertIn('! not_charging Discharging || shutdown',function('ctrl_charging'))
         self.assertIn('force_off',function('ctrl_charging'))
 
+    def test_bundled_and_github_archives_select_the_ng_source(self):
+        import tarfile, io
+        installer=(ROOT/'install-tarball.sh').read_text()
+        start=installer.index('select_source() {')
+        end=installer.index('\n}',start)+len('\n}')
+        select=installer[start:end]
+        for folder in ['acc-ng-v1.0.1-ng','ACC-NG-main','ACC-NG-v1.0.1-ng']:
+            with tempfile.TemporaryDirectory() as td:
+                archive=pathlib.Path(td)/'source.tgz'
+                with tarfile.open(archive,'w:gz') as tar:
+                    for name,data in [('module.prop',b'id=acc\nngApiVersion=1\n'),('install.sh',b'#!/bin/sh\n')]:
+                        info=tarfile.TarInfo(folder+'/'+name);info.size=len(data);tar.addfile(info,io.BytesIO(data))
+                with tarfile.open(archive) as tar:tar.extractall(td,filter='data')
+                self.assertEqual([folder],self.run_shell(f'cd {td}; '+select+'; select_source'))
+
     def test_global_ng_preferences_survive_profile_writes(self):
         with tempfile.TemporaryDirectory() as td:
             p=pathlib.Path(td);(p/'.config-ver').write_text('202310160');(p/'.config-help').write_text('')
