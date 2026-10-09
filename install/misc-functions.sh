@@ -1,3 +1,6 @@
+. $execDir/limit-control.sh
+
+
 apply_on_boot() {
 
   local entry=
@@ -13,7 +16,7 @@ apply_on_boot() {
 
   ! tt "${applyOnBoot[*]-}${maxChargingVoltage[*]-}" "*--exit*" || exitCmd=true
 
-  for entry in ${applyOnBoot[@]-} ${maxChargingVoltage[@]-}; do
+  for entry in ${applyOnBoot[@]-}; do
     set -- ${entry//::/ }
     [ -f ${1-//} ] || continue
     file=${1-}
@@ -26,6 +29,8 @@ apply_on_boot() {
     [ $arg = default ] && oppositeValue="$value" || oppositeValue="$default"
     write \$$arg $file 0 || :
   done
+
+  apply_limit voltage "$arg" "${maxChargingVoltage[@]-}" || :
 
   $exitCmd && [ $arg = value ] && exit 0 || :
 }
@@ -40,9 +45,7 @@ apply_on_plug() {
   local arg=${1:-value}
   local oppositeValue=
 
-  for entry in ${applyOnPlug[@]-} ${maxChargingVoltage[@]-} \
-    ${maxChargingCurrent[@]:-$([ .$arg != .default ] || cat $TMPDIR/ch-curr-ctrl-files 2>/dev/null || :)}
-  do
+  for entry in ${applyOnPlug[@]-}; do
     set -- ${entry//::/ }
     [ -f ${1-//} ] || continue
     file=${1-}
@@ -51,6 +54,9 @@ apply_on_plug() {
     [ $arg = default ] && oppositeValue="$value" || oppositeValue="$default"
     write \$$arg $file 0 || :
   done
+  apply_limit voltage "$arg" "${maxChargingVoltage[@]-}" || :
+  apply_limit current "$arg" "${maxChargingCurrent[@]-}" || :
+
 }
 
 
@@ -196,7 +202,7 @@ enable_charging() {
 
   ! not_charging || {
 
-    set_temp_level
+    set_temp_level || :
     [ ! -f $TMPDIR/.sw ] || (. $TMPDIR/.sw; rm $TMPDIR/.sw; flip_sw on) 2>/dev/null || :
 
     if ! $ghostCharging || { $ghostCharging && online; }; then
@@ -393,12 +399,12 @@ write() {
   local i=y
   local f=$dataDir/logs/write.log
   blacklisted=false
-  if [ -f "$2" ] && chown 0:0 $2 && chmod 0644 $2; then
+  if [ -f "$2" ]; then
     case "$(grep -E "^(#$2|$2)$" $f 2>/dev/null || :)" in
-      \#*) blacklisted=true;;
-      */*) eval "echo $1 > $2" || i=x;;
+      \#*) blacklisted=true; i=x;;
+      */*) write_control "$(eval "echo $1")" "$2" || i=x;;
       *) echo \#$2 >> $f
-         eval "echo $1 > $2" || i=x
+         write_control "$(eval "echo $1")" "$2" || i=x
          sed -i "s|^#$2$|$2|" $f;;
     esac
   else
@@ -415,7 +421,7 @@ write() {
   [ $i = x ] && return ${3-1} || {
     for i in 1 2 3; do
       usleep 330000
-      eval "echo $1 > $2" || :
+      write_control "$(eval "echo $1")" "$2" || return 1
     done
   }
 }

@@ -75,21 +75,28 @@ read_status() {
 
 
 set_temp_level() {
-  local a=
-  local b=battery/siop_level
-  local l=${1:-${tempLevel-}}
+  local a= b=battery/siop_level l=${1:-${tempLevel-}}
+  local entries
+  entries=()
   [ -n "$l" ] || return 0
-  if [ -f $b ]; then
-    chown 0:0 $b && chmod 0644 $b && echo $((100 - $l)) > $b || :
+  case "$l" in *[!0-9]*) return 11;; esac
+  [ "$l" -ge 0 ] && [ "$l" -le 100 ] || return 11
+  if [ "$l" -eq 0 ]; then
+    apply_limit temperature default
+    return $?
+  fi
+  if [ -f "$b" ]; then
+    entries=("$b::$((100 - l))::0")
   else
     for a in */num_system_temp*levels; do
-      b=$(echo $a | sed 's/\/num_/\//; s/s$//')
-      if [ ! -f $a ] || [ ! -f $b ]; then
-        continue
-      fi
-      chown 0:0 $b && chmod 0644 $b && echo $(( ($(cat $a) * l) / 100 )) > $b || :
+      b=$(echo "$a" | sed 's/\/num_/\//; s/s$//')
+      [ -f "$a" ] && [ -f "$b" ] || continue
+      local levels=$(cat "$a")
+      case "$levels" in ''|*[!0-9]*) continue;; esac
+      entries=("${entries[@]-}" "$b::$((levels * l / 100))::0")
     done
   fi
+  apply_limit temperature value "${entries[@]-}"
 }
 
 

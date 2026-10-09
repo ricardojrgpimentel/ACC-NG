@@ -1,3 +1,16 @@
+# v1.0.4-ng (candidate, unreleased)
+
+- Adapt ACC dev's conditional resets: only restore current, voltage and thermal
+  controls changed by ACC-NG, using their first observed values.
+- Keep current/voltage setters separate from each other and user boot/plug scripts.
+- Preserve OEM ownership and permissions; try direct writes first and restore
+  any temporary owner-write permission, including on errors.
+- Keep failed/partial changes recoverable; verify readback and bound concurrent
+  limit operations to a five-second lock wait.
+- Exclude battery/store_mode from automatic charging-switch discovery (69cfecb).
+- Preserve NG API 1, configuration schema, CLI output and existing protections.
+- Add host and Android fixture tests. Live sysfs/upgrade validation is pending.
+
 # v1.0.3-ng
 
 - Fix charger detection during first-install current calibration on Samsung:

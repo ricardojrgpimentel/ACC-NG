@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 """Build deterministic ACC-NG installation artifacts without modifying sources."""
 from pathlib import Path
-import gzip, hashlib, io, json, tarfile, zipfile
+import argparse, gzip, hashlib, io, json, tarfile, zipfile
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--update-metadata', action='store_true',
+    help='Also update repository module.json when preparing publication.')
+args = parser.parse_args()
 ROOT = Path(__file__).resolve().parents[1]
 props = dict(line.split('=', 1) for line in (ROOT / 'module.prop').read_text().splitlines() if '=' in line)
 version, code = props['version'], props['versionCode']
@@ -48,7 +52,9 @@ metadata = {'version': version, 'versionCode': int(code), 'zipUrl': f'{base}/{na
     'onlineInstaller': f'{base}/install-online.sh',
     'changelog': 'https://raw.githubusercontent.com/ricardojrgpimentel/ACC-NG/main/changelog.md',
     'sha256': hashlib.sha256(tar_path.read_bytes()).hexdigest()}
-(ROOT/'module.json').write_text(json.dumps(metadata, indent=2) + '\n')
+(OUT/'module.json').write_text(json.dumps(metadata, indent=2) + '\n')
+if args.update_metadata:
+    (ROOT/'module.json').write_text(json.dumps(metadata, indent=2) + '\n')
 for installer in ('install-tarball.sh', 'install-online.sh'):
     (OUT/installer).write_bytes((ROOT/installer).read_bytes())
 print(tar_path)

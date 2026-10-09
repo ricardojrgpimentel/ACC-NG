@@ -51,3 +51,12 @@ language to match its UI. Saved profiles preserve these global engine preference
 
 See [the original documentation](README.upstream.md) for ACC's supported controls.
 Changes after upstream v2023.10.16 require separate device compatibility review.
+The v1.0.4-ng candidate selectively adapts limit ownership/reset handling and
+excludes store_mode; the upstream schema/API changes are not included. See
+[the integration record](docs/upstream-integration.md).
+
+
+Candidate builds write update metadata under `_builds/` and leave the published
+`module.json` unchanged. Use `python3 tools/build_ng.py --update-metadata` only
+when preparing publication with matching release assets; a source push alone
+must not advertise candidate download URLs.

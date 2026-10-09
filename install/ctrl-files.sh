@@ -14,7 +14,7 @@ battery/bd_trickle_cnt 0 1
 battery/device/*stop_charging 0 1
 battery/device/Charging_Enable 1 0
 battery/op_disable_charge 0 1
-battery/store_mode 0 1
+#battery/store_mode 0 1
 battery/test_mode 2 1
 battery_ext/smart_charging_interruption 0 1
 idt/pin_enabled 1 0
