@@ -34,6 +34,10 @@ The tarball bundled with AccA-NG is produced by this same script.
 
 The upstream configuration schema stays `202310160`. NG module releases have
 separate `versionCode`, `ngApiVersion` and `upstreamVersionCode` metadata.
+`ngConfigSchema=202310160` is the authoritative frontend configuration schema;
+`ngCapabilities` lists implemented API features, without promising device support.
+Old API 1 metadata retains its fixed baseline. Unknown schemas must not be written
+using guessed array indices. See [the contract fixtures](tests/fixtures/frontend-contract.json).
 Installers preserve settings and keep dated module/config snapshots in
 `/data/adb/vr25/acc-data/backup/install-*`. Validate a device backup before migrating.
 
@@ -51,7 +55,7 @@ language to match its UI. Saved profiles preserve these global engine preference
 
 See [the original documentation](README.upstream.md) for ACC's supported controls.
 Changes after upstream v2023.10.16 require separate device compatibility review.
-The v1.0.4-ng candidate selectively adapts limit ownership/reset handling and
+The v1.0.5-ng candidate includes I1, which selectively adapts limit ownership/reset handling and
 excludes store_mode; the upstream schema/API changes are not included. See
 [the integration record](docs/upstream-integration.md).
 
@@ -60,3 +64,17 @@ Candidate builds write update metadata under `_builds/` and leave the published
 `module.json` unchanged. Use `python3 tools/build_ng.py --update-metadata` only
 when preparing publication with matching release assets; a source push alone
 must not advertise candidate download URLs.
+
+Frontend fixtures can be reproduced on the host or in Android's mksh/BusyBox:
+
+```sh
+python3 tools/export_contract.py --check --app ../ACCA-NG
+ACC_TEST_ADB_SERIAL=<serial> python3 -m unittest discover -s tests -p test_contract.py -v
+```
+
+The Android runner creates only `/data/local/tmp/acc-contract.*` fixtures and
+removes them afterwards. Hardware reads/writes, notifications and daemon control
+are stubbed; the installed module and live charging state are not changed.
+Snapshots are exported with `python3 tools/export_contract.py --app ../ACCA-NG`
+when intentionally changing the API contract, then reviewed and tested in both
+projects. The app CI verifies fixture source hashes against its bundled engine.

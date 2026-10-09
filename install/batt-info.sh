@@ -5,6 +5,7 @@ batt_info() {
   local voltNow=
   local currNow=
   local powerNow=
+  local hasCurrent=false hasVoltage=false
   local factor=
   set +eu
 
@@ -33,7 +34,7 @@ batt_info() {
       | sed -E -e 's/^POWER_SUPPLY_//' \
         -e 's/^BATT_VOL=/VOLTAGE_NOW=/' \
         -e 's/^BATT_TEMP=/TEMP=/' \
-        -e '/^(CHARGE_TYPE|NAME)=/d'\
+        -e '/^(CHARGE_TYPE|NAME|POWER_NOW)=/d'\
         -e "/^CAPACITY=/s/=.*/=$(cat $battCapacity)/"
   )"
 
@@ -56,8 +57,14 @@ batt_info() {
 
   # parse CURRENT_NOW & convert to Amps
   currNow=$(echo "$info" | sed -n "s/^CURRENT_NOW=//p" | head -n1)
-  dtr_conv_factor ${currNow#-} ${ampFactor:-$ampFactor_}
-  currNow=$(calc2 ${currNow:-0} / $factor)
+  if printf '%s\n' "$currNow" | grep -Eq '^[+-]?[0-9]+([.][0-9]+)?$'; then
+    hasCurrent=true
+    dtr_conv_factor ${currNow#-} ${ampFactor:-$ampFactor_}
+    currNow=$(calc2 "$currNow" / $factor)
+  else
+    currNow=0.00
+    info=$(echo "$info" | sed '/^CURRENT_NOW=/d')
+  fi
 
 
   # add/remove negative sign
@@ -77,8 +84,14 @@ batt_info() {
 
   # parse VOLTAGE_NOW & convert to Volts
   voltNow=$(echo "$info" | sed -n "s/^VOLTAGE_NOW=//p" | head -n1)
-  dtr_conv_factor $voltNow ${voltFactor-}
-  voltNow=$(calc2 ${voltNow:-0} / $factor)
+  if printf '%s\n' "$voltNow" | grep -Eq '^[+]?[0-9]+([.][0-9]+)?$'; then
+    hasVoltage=true
+    dtr_conv_factor $voltNow ${voltFactor-}
+    voltNow=$(calc2 "$voltNow" / $factor)
+  else
+    voltNow=0.00
+    info=$(echo "$info" | sed '/^VOLTAGE_NOW=/d')
+  fi
 
 
   # calculate POWER_NOW (Watts)
@@ -92,10 +105,12 @@ batt_info() {
       || echo "$info" | grep -Ev '^(CURRENT|VOLTAGE)_NOW='
 
     # print CURRENT_NOW, VOLTAGE_NOW and POWER_NOW
-    echo "
-CURRENT_NOW=$currNow$(print_A 2>/dev/null || :)
-VOLTAGE_NOW=$voltNow$(print_V 2>/dev/null || :)
-POWER_NOW=$powerNow$(print_W 2>/dev/null || :)"
+    echo
+    ! $hasCurrent || echo "CURRENT_NOW=$currNow$(print_A 2>/dev/null || :)"
+    ! $hasVoltage || echo "VOLTAGE_NOW=$voltNow$(print_V 2>/dev/null || :)"
+    if $hasCurrent && $hasVoltage; then
+      echo "POWER_NOW=$powerNow$(print_W 2>/dev/null || :)"
+    fi
 
 
   # power supply info

@@ -1,3 +1,14 @@
+# v1.0.5-ng (candidate, unreleased)
+
+- Declare NG API 1 capabilities and configuration schema separately from release dates.
+- Preserve missing/invalid current and voltage as unavailable in frontend info,
+  instead of fabricating zero readings. Valid zero remains a measured value.
+- Add shared frontend contract fixtures generated from production shell fragments.
+  Cover defaults, profile writes/reloads, manual switch, thermal r suffix, global
+  preferences, status/test exit codes and milli/micro sensor units.
+- Add an opt-in Android runner using temporary files only. Live installation,
+  control, upgrade/rollback and reboot validation remain pending.
+
 # v1.0.4-ng (candidate, unreleased)
 
 - Adapt ACC dev's conditional resets: only restore current, voltage and thermal

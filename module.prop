@@ -1,10 +1,12 @@
 id=acc
 domain=vr25
 name=Advanced Charging Controller NG (ACC-NG)
-version=v1.0.4-ng
-versionCode=202610094
+version=v1.0.5-ng
+versionCode=202610095
 author=Ricardo Pimentel; based on ACC by VR25
 description=Charging controller for AccA-NG. Applies charging limits and temperature settings configured in the app and keeps control active in the background.
 updateJson=https://raw.githubusercontent.com/ricardojrgpimentel/ACC-NG/main/module.json
 ngApiVersion=1
 upstreamVersionCode=202310160
+ngConfigSchema=202310160
+ngCapabilities=info-key-value-si,capacity-six,resume-temperature,resume-temperature-override,manual-discharge-polarity,ng-notifications

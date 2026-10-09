@@ -1,0 +1,115 @@
+{
+  "version": {
+    "current": {
+      "code": 0,
+      "output": "v1.0.5-ng (202610095)"
+    }
+  },
+  "module": "id=acc\ndomain=vr25\nname=Advanced Charging Controller NG (ACC-NG)\nversion=v1.0.5-ng\nversionCode=202610095\nauthor=Ricardo Pimentel; based on ACC by VR25\ndescription=Charging controller for AccA-NG. Applies charging limits and temperature settings configured in the app and keeps control active in the background.\nupdateJson=https://raw.githubusercontent.com/ricardojrgpimentel/ACC-NG/main/module.json\nngApiVersion=1\nupstreamVersionCode=202310160\nngConfigSchema=202310160\nngCapabilities=info-key-value-si,capacity-six,resume-temperature,resume-temperature-override,manual-discharge-polarity,ng-notifications",
+  "config": {
+    "default": {
+      "code": 0,
+      "output": "ng_notifications=true\nng_notification_language=en\nallow_idle_above_pcap=true\namp_factor=\nbatt_status_workaround=true\n\ncapacity_mask=false\ncapacity_sync=false\n\ncooldown_capacity=50\ncooldown_charge=\ncooldown_current=\ncooldown_pause=\ncooldown_temp=35\n\ncurrent_workaround=false\ndischarge_polarity=\nforce_off=false\nidle_threshold=40\nlang=en\n\nmax_temp=50\nresume_temp=45\nmax_temp_pause=45\n\noff_mid=true\npause_capacity=75\nprioritize_batt_idle_mode=true\nreboot_resume=false\n\nreset_batt_stats_on_pause=false\nreset_batt_stats_on_plug=false\nreset_batt_stats_on_unplug=false\n\nresume_capacity=70\nshutdown_capacity=5\nshutdown_temp=55\ntemp_level=0\nvolt_factor=\n\napply_on_boot=\n\napply_on_plug=\n\nbatt_status_override=\n\ncharging_switch=\n\ncooldown_custom=\n\nmax_charging_current=\n\nmax_charging_voltage=\n\nrun_cmd_on_pause=\n\nloop_cmd="
+    },
+    "profile": {
+      "raw": "configVerCode=202310160\n\nngNotifications=false\nngNotificationLanguage=pt-PT\nallowIdleAbovePcap=true\nampFactor=\nbattStatusWorkaround=true\ncapacity=(2 101 50 60 false false)\ncooldownCurrent=\ncooldownRatio=( )\ncurrentWorkaround=false\ndischargePolarity=\nforceOff=false\nidleThreshold=40\nlanguage=en\noffMid=true\nprioritizeBattIdleMode=true\nrebootResume=false\nresetBattStats=(false false false)\ntemperature=(35 50 40r 55)\ntempLevel=0\nvoltFactor=\n\napplyOnBoot=(battery/current_max::500::1800)\n\napplyOnPlug=(battery/voltage_max::4100::4200)\n\nbattStatusOverride=''\n\nchargingSwitch=(battery/charging_enabled 1 0 --)\n\ncooldownCustom=()\n\nmaxChargingCurrent=(500)\n\nmaxChargingVoltage=(4100)\n\nrunCmdOnPause=''\n\n\n",
+      "output": "ng_notifications=false\nng_notification_language=pt-PT\nallow_idle_above_pcap=true\namp_factor=\nbatt_status_workaround=true\n\ncapacity_mask=false\ncapacity_sync=false\n\ncooldown_capacity=101\ncooldown_charge=\ncooldown_current=\ncooldown_pause=\ncooldown_temp=35\n\ncurrent_workaround=false\ndischarge_polarity=\nforce_off=false\nidle_threshold=40\nlang=en\n\nmax_temp=50\nresume_temp=40r\nmax_temp_pause=40\n\noff_mid=true\npause_capacity=60\nprioritize_batt_idle_mode=true\nreboot_resume=false\n\nreset_batt_stats_on_pause=false\nreset_batt_stats_on_plug=false\nreset_batt_stats_on_unplug=false\n\nresume_capacity=50\nshutdown_capacity=2\nshutdown_temp=55\ntemp_level=0\nvolt_factor=\n\napply_on_boot=battery/current_max::500::1800\n\napply_on_plug=battery/voltage_max::4100::4200\n\nbatt_status_override=\n\ncharging_switch=battery/charging_enabled 1 0 --\n\ncooldown_custom=\n\nmax_charging_current=500\n\nmax_charging_voltage=4100\n\nrun_cmd_on_pause=\n\nloop_cmd="
+    },
+    "voltage-profile": {
+      "raw": "configVerCode=202310160\n\nngNotifications=false\nngNotificationLanguage=pt\nallowIdleAbovePcap=true\nampFactor=\nbattStatusWorkaround=true\ncapacity=(2 101 3800 3900 true false)\ncooldownCurrent=\ncooldownRatio=( )\ncurrentWorkaround=false\ndischargePolarity=\nforceOff=false\nidleThreshold=40\nlanguage=en\noffMid=true\nprioritizeBattIdleMode=true\nrebootResume=false\nresetBattStats=(false false false)\ntemperature=(35 50 40r 55)\ntempLevel=0\nvoltFactor=\n\napplyOnBoot=()\n\napplyOnPlug=()\n\nbattStatusOverride=''\n\nchargingSwitch=()\n\ncooldownCustom=()\n\nmaxChargingCurrent=()\n\nmaxChargingVoltage=()\n\nrunCmdOnPause=''\n\n\n",
+      "output": "ng_notifications=false\nng_notification_language=pt\nallow_idle_above_pcap=true\namp_factor=\nbatt_status_workaround=true\n\ncapacity_mask=false\ncapacity_sync=true\n\ncooldown_capacity=101\ncooldown_charge=\ncooldown_current=\ncooldown_pause=\ncooldown_temp=35\n\ncurrent_workaround=false\ndischarge_polarity=\nforce_off=false\nidle_threshold=40\nlang=en\n\nmax_temp=50\nresume_temp=40r\nmax_temp_pause=40\n\noff_mid=true\npause_capacity=3900\nprioritize_batt_idle_mode=true\nreboot_resume=false\n\nreset_batt_stats_on_pause=false\nreset_batt_stats_on_plug=false\nreset_batt_stats_on_unplug=false\n\nresume_capacity=3800\nshutdown_capacity=2\nshutdown_temp=55\ntemp_level=0\nvolt_factor=\n\napply_on_boot=\n\napply_on_plug=\n\nbatt_status_override=\n\ncharging_switch=\n\ncooldown_custom=\n\nmax_charging_current=\n\nmax_charging_voltage=\n\nrun_cmd_on_pause=\n\nloop_cmd="
+    },
+    "cooldown": {
+      "raw": "configVerCode=202310160\n\nngNotifications=true\nngNotificationLanguage=en\nallowIdleAbovePcap=true\nampFactor=\nbattStatusWorkaround=true\ncapacity=(2 55 50 60 true true)\ncooldownCurrent=\ncooldownRatio=(30 5)\ncurrentWorkaround=false\ndischargePolarity=\nforceOff=false\nidleThreshold=40\nlanguage=en\noffMid=true\nprioritizeBattIdleMode=true\nrebootResume=false\nresetBattStats=(true true true)\ntemperature=(35 50 45 55)\ntempLevel=0\nvoltFactor=\n\napplyOnBoot=()\n\napplyOnPlug=()\n\nbattStatusOverride=''\n\nchargingSwitch=()\n\ncooldownCustom=()\n\nmaxChargingCurrent=()\n\nmaxChargingVoltage=()\n\nrunCmdOnPause=''\n\n\n",
+      "output": "ng_notifications=true\nng_notification_language=en\nallow_idle_above_pcap=true\namp_factor=\nbatt_status_workaround=true\n\ncapacity_mask=true\ncapacity_sync=true\n\ncooldown_capacity=55\ncooldown_charge=30\ncooldown_current=\ncooldown_pause=5\ncooldown_temp=35\n\ncurrent_workaround=false\ndischarge_polarity=\nforce_off=false\nidle_threshold=40\nlang=en\n\nmax_temp=50\nresume_temp=45\nmax_temp_pause=45\n\noff_mid=true\npause_capacity=60\nprioritize_batt_idle_mode=true\nreboot_resume=false\n\nreset_batt_stats_on_pause=true\nreset_batt_stats_on_plug=true\nreset_batt_stats_on_unplug=true\n\nresume_capacity=50\nshutdown_capacity=2\nshutdown_temp=55\ntemp_level=0\nvolt_factor=\n\napply_on_boot=\n\napply_on_plug=\n\nbatt_status_override=\n\ncharging_switch=\n\ncooldown_custom=\n\nmax_charging_current=\n\nmax_charging_voltage=\n\nrun_cmd_on_pause=\n\nloop_cmd="
+    }
+  },
+  "info": {
+    "micro-charging": {
+      "code": 0,
+      "output": "CAPACITY=60\nCHARGE_DISABLE=1\nCHARGE_DONE=0\nCURRENT_QNOVO=12345\nCYCLE_COUNT=42\nHEALTH=Good\nINPUT_CURRENT_LIMITED=0\nINPUT_SUSPEND=1\nPARALLEL_DISABLE=1\nPRESENT=1\nSTATUS=Charging\nSTEP_CHARGING_ENABLED=1\nSW_JEITA_ENABLED=0\nTAPER_CONTROL_ENABLED=0\nTECHNOLOGY=Li-ion\nTEMP=325\n\nCURRENT_NOW=1.80\nVOLTAGE_NOW=4.20\nPOWER_NOW=7.56"
+    },
+    "milli-charging": {
+      "code": 0,
+      "output": "CAPACITY=60\nCHARGE_DISABLE=1\nCHARGE_DONE=0\nCURRENT_QNOVO=12345\nCYCLE_COUNT=42\nHEALTH=Good\nINPUT_CURRENT_LIMITED=0\nINPUT_SUSPEND=1\nPARALLEL_DISABLE=1\nPRESENT=1\nSTATUS=Charging\nSTEP_CHARGING_ENABLED=1\nSW_JEITA_ENABLED=0\nTAPER_CONTROL_ENABLED=0\nTECHNOLOGY=Li-ion\nTEMP=325\n\nCURRENT_NOW=1.80\nVOLTAGE_NOW=4.20\nPOWER_NOW=7.56"
+    },
+    "discharging": {
+      "code": 0,
+      "output": "CAPACITY=60\nCHARGE_DISABLE=1\nCHARGE_DONE=0\nCURRENT_QNOVO=12345\nCYCLE_COUNT=42\nHEALTH=Good\nINPUT_CURRENT_LIMITED=0\nINPUT_SUSPEND=1\nPARALLEL_DISABLE=1\nPRESENT=1\nSTATUS=Discharging\nSTEP_CHARGING_ENABLED=1\nSW_JEITA_ENABLED=0\nTAPER_CONTROL_ENABLED=0\nTECHNOLOGY=Li-ion\nTEMP=325\n\nCURRENT_NOW=-0.75\nVOLTAGE_NOW=4.20\nPOWER_NOW=-3.15"
+    },
+    "idle": {
+      "code": 0,
+      "output": "CAPACITY=60\nCHARGE_DISABLE=1\nCHARGE_DONE=0\nCURRENT_QNOVO=12345\nCYCLE_COUNT=42\nHEALTH=Good\nINPUT_CURRENT_LIMITED=0\nINPUT_SUSPEND=1\nPARALLEL_DISABLE=1\nPRESENT=1\nSTATUS=Not charging\nSTEP_CHARGING_ENABLED=1\nSW_JEITA_ENABLED=0\nTAPER_CONTROL_ENABLED=0\nTECHNOLOGY=Li-ion\nTEMP=325\n\nCURRENT_NOW=-0.00\nVOLTAGE_NOW=4.20\nPOWER_NOW=0.00"
+    },
+    "zero": {
+      "code": 0,
+      "output": "CAPACITY=60\nCHARGE_DISABLE=1\nCHARGE_DONE=0\nCURRENT_QNOVO=12345\nCYCLE_COUNT=42\nHEALTH=Good\nINPUT_CURRENT_LIMITED=0\nINPUT_SUSPEND=1\nPARALLEL_DISABLE=1\nPRESENT=1\nSTATUS=Charging\nSTEP_CHARGING_ENABLED=1\nSW_JEITA_ENABLED=0\nTAPER_CONTROL_ENABLED=0\nTECHNOLOGY=Li-ion\nTEMP=325\n\nCURRENT_NOW=0.00\nVOLTAGE_NOW=4.20\nPOWER_NOW=0.00"
+    },
+    "missing-current": {
+      "code": 0,
+      "output": "CAPACITY=60\nCHARGE_DISABLE=1\nCHARGE_DONE=0\nCURRENT_QNOVO=12345\nCYCLE_COUNT=42\nHEALTH=Good\nINPUT_CURRENT_LIMITED=0\nINPUT_SUSPEND=1\nPARALLEL_DISABLE=1\nPRESENT=1\nSTATUS=Charging\nSTEP_CHARGING_ENABLED=1\nSW_JEITA_ENABLED=0\nTAPER_CONTROL_ENABLED=0\nTECHNOLOGY=Li-ion\nTEMP=325\n\nVOLTAGE_NOW=4.20"
+    },
+    "malformed-current": {
+      "code": 0,
+      "output": "CAPACITY=60\nCHARGE_DISABLE=1\nCHARGE_DONE=0\nCURRENT_QNOVO=12345\nCYCLE_COUNT=42\nHEALTH=Good\nINPUT_CURRENT_LIMITED=0\nINPUT_SUSPEND=1\nPARALLEL_DISABLE=1\nPRESENT=1\nSTATUS=Charging\nSTEP_CHARGING_ENABLED=1\nSW_JEITA_ENABLED=0\nTAPER_CONTROL_ENABLED=0\nTECHNOLOGY=Li-ion\nTEMP=325\n\nVOLTAGE_NOW=4.20"
+    },
+    "missing-voltage": {
+      "code": 0,
+      "output": "CAPACITY=60\nCHARGE_DISABLE=1\nCHARGE_DONE=0\nCURRENT_QNOVO=12345\nCYCLE_COUNT=42\nHEALTH=Good\nINPUT_CURRENT_LIMITED=0\nINPUT_SUSPEND=1\nPARALLEL_DISABLE=1\nPRESENT=1\nSTATUS=Charging\nSTEP_CHARGING_ENABLED=1\nSW_JEITA_ENABLED=0\nTAPER_CONTROL_ENABLED=0\nTECHNOLOGY=Li-ion\nTEMP=325\n\nCURRENT_NOW=1.80"
+    },
+    "malformed-voltage": {
+      "code": 0,
+      "output": "CAPACITY=60\nCHARGE_DISABLE=1\nCHARGE_DONE=0\nCURRENT_QNOVO=12345\nCYCLE_COUNT=42\nHEALTH=Good\nINPUT_CURRENT_LIMITED=0\nINPUT_SUSPEND=1\nPARALLEL_DISABLE=1\nPRESENT=1\nSTATUS=Charging\nSTEP_CHARGING_ENABLED=1\nSW_JEITA_ENABLED=0\nTAPER_CONTROL_ENABLED=0\nTECHNOLOGY=Li-ion\nTEMP=325\n\nCURRENT_NOW=1.80"
+    },
+    "verbose": {
+      "code": 0,
+      "output": "CAPACITY=60\nCHARGE_DISABLE=1\nCHARGE_DONE=0\nCURRENT_NOW=1800000\nCURRENT_QNOVO=12345\nCYCLE_COUNT=42\nHEALTH=Good\nINPUT_CURRENT_LIMITED=0\nINPUT_SUSPEND=1\nPARALLEL_DISABLE=1\nPRESENT=1\nSTATUS=Charging\nSTEP_CHARGING_ENABLED=1\nSW_JEITA_ENABLED=0\nTAPER_CONTROL_ENABLED=0\nTECHNOLOGY=Li-ion\nTEMP=325\nVOLTAGE_NOW=4200000\n\nCURRENT_NOW=1.80\nVOLTAGE_NOW=4.20\nPOWER_NOW=7.56"
+    },
+    "small-micro": {
+      "code": 0,
+      "output": "CAPACITY=60\nCHARGE_DISABLE=1\nCHARGE_DONE=0\nCURRENT_QNOVO=12345\nCYCLE_COUNT=42\nHEALTH=Good\nINPUT_CURRENT_LIMITED=0\nINPUT_SUSPEND=1\nPARALLEL_DISABLE=1\nPRESENT=1\nSTATUS=Charging\nSTEP_CHARGING_ENABLED=1\nSW_JEITA_ENABLED=0\nTAPER_CONTROL_ENABLED=0\nTECHNOLOGY=Li-ion\nTEMP=325\n\nCURRENT_NOW=0.01\nVOLTAGE_NOW=4.20\nPOWER_NOW=0.04"
+    }
+  },
+  "daemon": {
+    "running": {
+      "code": 0,
+      "output": ""
+    },
+    "stopped": {
+      "code": 9,
+      "output": ""
+    },
+    "already-running": {
+      "code": 8,
+      "output": "Already running"
+    }
+  },
+  "switch": {
+    "working": {
+      "code": 0,
+      "output": "battery/charging_enabled 1 0\nSwitch works\n- battIdleMode=false"
+    },
+    "idle": {
+      "code": 15,
+      "output": "battery/charging_enabled 1 0\nSwitch works\n- battIdleMode=true"
+    },
+    "failed": {
+      "code": 10,
+      "output": "battery/charging_enabled 1 0\nSwitch failed"
+    },
+    "list": {
+      "code": 0,
+      "output": "battery/charging_enabled 1 0\nbattery/batt_slate_mode 0 1 --"
+    }
+  },
+  "sources": {
+    "install/acca.sh": "a325c45e4743e68d9066ffe5c27adb04eb834e2875cc356755b26d75be22657e",
+    "install/acc.sh": "9328f81a1698a6d0aab18934b1275c146d23f3422635403583e5883ac8a30ce6",
+    "install/batt-info.sh": "91cb30bc20f325557161709b8296bac12a700839d7c496e8d20f783da2814af1",
+    "install/batt-interface.sh": "7f083f91a3365e84e6b03180713ed2c5d6815cb3c52f2d206977fd4f5a167d5d",
+    "install/print-config.sh": "00e297b859ca809819f36ad7a4a88b189d7df950d2da2be14b286b9a508e7cba",
+    "install/default-config.txt": "c92d7b9ab43678eb311d2de4b53a0342d8df024801387cfa46a86666f97fc12e",
+    "install/write-config.sh": "3cc17b8dc0daffc610669381219d914fd8fb1932ce47e75489081ab77d6daee6",
+    "install/set-prop.sh": "15fbc94f1a88d19bc692089aca9208a5bfb145624a55007b66316a16ca73bc80"
+  }
+}
