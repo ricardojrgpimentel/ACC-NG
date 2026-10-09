@@ -53,6 +53,36 @@ class EngineTests(unittest.TestCase):
     def test_battery_online_enum_is_not_a_connected_charger(self):
         self.assertEqual([], self.events('echo 1 > battery/online; echo 0 > usb/online; ng_observe Discharging'))
 
+    def test_controller_online_ignores_battery_enum_and_otg(self):
+        source=(ROOT/'install/batt-interface.sh').read_text()
+        start=source.index('online() {');end=source.index('\n}',start)+len('\n}')
+        with tempfile.TemporaryDirectory() as td:
+            p=pathlib.Path(td)
+            for name,value in [('battery','1'),('otg','1'),('usb','0')]:
+                (p/name).mkdir();(p/name/'online').write_text(value)
+            script=f'cd "{td}"; '+source[start:end]
+            self.assertEqual(['OFFLINE'],self.run_shell(script+'; if online; then echo ONLINE; else echo OFFLINE; fi'))
+            (p/'usb/online').write_text('1')
+            self.assertEqual(['ONLINE'],self.run_shell(script+'; if online; then echo ONLINE; else echo OFFLINE; fi'))
+            (p/'usb/online').unlink()
+            self.assertEqual(['UNKNOWN_HELD'],self.run_shell(script+'; if online; then echo UNKNOWN_HELD; fi'))
+
+    def test_lock_cleanup_signals_only_verified_daemon_workers(self):
+        for filename in ['uninstall.sh','release-lock.sh']:
+            source=(ROOT/'install'/filename).read_text()
+            start=source.index('stop_daemon_holders() {')
+            end=source.index('\n}',start)+len('\n}')
+            with tempfile.TemporaryDirectory() as td:
+                p=pathlib.Path(td)
+                commands={101:b'sh\0/data/adb/vr25/acc/accd.sh\0',
+                    102:b'/system/bin/sh\0/data/adb/modules/acc/accd.sh\0',
+                    103:b'sh\0-c\0echo /accd.sh\0',104:b'sh\0/data/adb/modules/other/accd.sh\0'}
+                for pid,cmd in commands.items():
+                    (p/str(pid)).mkdir();(p/str(pid)/'cmdline').write_bytes(cmd)
+                helper=source[start:end].replace('/proc/',td+'/')
+                script='pgrep() { echo "101 102 103 104"; }; sleep() { :; }; kill() { echo "$*"; }; '+helper+'; stop_daemon_holders'
+                self.assertEqual(['-TERM 101','-TERM 102','-KILL 101','-KILL 102'],self.run_shell(script))
+
     def test_thermal_and_low_battery_notifications_are_deduplicated(self):
         out=self.events('echo 1 > usb/online; ng_observe Charging; echo 360 > battery/temp; ng_observe Charging; ng_observe Charging; echo 510 > battery/temp; ng_observe Charging; ng_observe Charging; echo 0 > usb/online; echo 19 > battery/cap; ng_observe Discharging; echo 18 > battery/cap; ng_observe Discharging')
         self.assertEqual(['connected:Charger connected','warm:Battery reached configured cooldown temperature','hot:Battery reached configured temperature limit','disconnected:Charger disconnected','low:Battery low: 19%'],out)

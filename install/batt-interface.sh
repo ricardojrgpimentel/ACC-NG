@@ -50,7 +50,17 @@ not_charging() {
 
 
 online() {
-  grep 1 */online | grep -iv bms >/dev/null
+  local file= value= type= seen=false
+  for file in */online; do
+    case "$file" in battery/*|bms/*|otg/*) continue;; esac
+    type=$(cat "${file%/online}/type" 2>/dev/null) || type=
+    case "$type" in Battery|BMS) continue;; esac
+    value=$(cat "$file" 2>/dev/null) || continue
+    case "$value" in 1) return 0;; 0) seen=true;; esac
+  done
+  $seen && return 1
+  # Unknown incoming power must not trigger automatic discharge calibration.
+  return 0
 }
 
 

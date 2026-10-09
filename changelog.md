@@ -1,3 +1,11 @@
+# v1.0.3-ng
+
+- Fix charger detection during first-install current calibration on Samsung:
+  ignore battery/OTG online flags and require an external supply reading.
+- Keep calibration conservative when external supply data is unavailable.
+- Stop verified orphan calibration workers before releasing the daemon lock;
+  bound installer/service lock waits instead of hanging on inherited locks.
+
 v1.0.2-ng (202610092)
 
 - Read the actual GitHub archive root for tagged online installs (GitHub strips v).
