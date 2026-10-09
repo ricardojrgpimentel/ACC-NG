@@ -657,7 +657,7 @@ case "${1-}" in
     test -n "$reference" || {
       grep -Eq '^version=.*-(beta|dev|rc)' $execDir/module.prop \
         && reference=dev \
-        || reference=master
+        || reference=main
     }
 
     ! test -f /data/adb/vr25/bin/curl || {
@@ -666,10 +666,10 @@ case "${1-}" in
     }
 
     if which curl >/dev/null; then
-      curl $insecure -Lo $TMPDIR/install-online.sh https://raw.githubusercontent.com/VR-25/acc/$reference/install-online.sh
+      curl $insecure -Lo $TMPDIR/install-online.sh https://raw.githubusercontent.com/ricardojrgpimentel/ACC-NG/$reference/install-online.sh
     else
       PATH=${PATH#*/busybox:} /dev/.vr25/busybox/wget -O $TMPDIR/install-online.sh --no-check-certificate \
-        https://raw.githubusercontent.com/VR-25/acc/$reference/install-online.sh
+        https://raw.githubusercontent.com/ricardojrgpimentel/ACC-NG/$reference/install-online.sh
     fi
     trap - EXIT
     set +eu

@@ -82,15 +82,16 @@ case "$PWD" in
     get_ver() { sed -n '/^versionCode=/s/.*=//p' ${1}module.prop 2>/dev/null || echo 0; }
     bundled_ver=$(get_ver ${1:-$id}[-_]*/)
     regular_ver=$(get_ver /data/adb/$domain/${1:-$id}/)
-    if [ $bundled_ver -le $regular_ver ] && [ $regular_ver -ne 0 ]; then
-      ln -s $(readlink -f /data/adb/$domain/${1:-$id}) .
+    if [ "$(sed -n 's/^ngApiVersion=//p' /data/adb/$domain/${1:-$id}/module.prop 2>/dev/null)" = 1 ] && [ $bundled_ver -le $regular_ver ] && [ $regular_ver -ne 0 ]; then
+      ln -sfn $(readlink -f /data/adb/$domain/${1:-$id}) .
       exit 0
     fi 2>/dev/null || :
   ;;
 esac
 
 # install ${1:-$id}
-export installDir="$2"
+export ACCA_FILES="$PWD"
+export installDir="${2:-$PWD}"
 /system/bin/sh ${1:-$id}[-_]*/install.sh
 
 exit 0

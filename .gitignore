@@ -2,3 +2,5 @@ _builds
 _misc
 .directory
 *.kate-swp
+
+__pycache__/

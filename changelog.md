@@ -1,3 +1,11 @@
+v1.0.0-ng (202610090)
+
+- First ACC-NG engine for AccA-NG, based on ACC v2023.10.16.
+- Preserve configurable limits and ACC thermal/cooldown/shutdown protections.
+- Add observed state notifications, Portuguese/English notices and bounded logs.
+- Identify the fork, use its update channel, preserve dated migration backups.
+- Keep module ID acc for one engine and compatible scheduler/runtime paths.
+
 **v2023.10.16 (202310160)**
 - "edit g" shall work with non-root apps (acc -h g, acc -l g, acc -la g)
 - -f supports additional options (e.g., acc -f -sc 500)

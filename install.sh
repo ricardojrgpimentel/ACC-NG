@@ -26,6 +26,14 @@ set -x
 exxit() {
   local e=$?
   set +eu
+  if [ "$e" != 0 ] && [ "${migration_started-false}" = true ] && [ -f "$backup_dir/module/service.sh" ]; then
+    /system/bin/sh "$srcDir/install/uninstall.sh" install
+    mkdir -p /data/adb/modules/$id
+    cp -a "$backup_dir/module/." /data/adb/modules/$id/
+    ln -sfn /data/adb/modules/$id /data/adb/$domain/$id
+    [ ! -f "$backup_dir/config.txt" ] || cp -p "$backup_dir/config.txt" "$config"
+    /data/adb/$domain/$id/service.sh --init
+  fi
   rm -rf /dev/.$domain.${id}-install
   $KSU || {
     rm -rf /data/adb/modules_update/$id
@@ -112,7 +120,7 @@ author=$(get_prop author)
 version=$(get_prop version)
 magiskModDir=/data/adb/modules
 versionCode=$(get_prop versionCode)
-accaFiles=/data/data/mattecarra.accapp/files ###
+accaFiles=${ACCA_FILES:-/data/data/com.accang.app/files} ###
 : ${installDir:=$accaFiles} ###
 config=$data_dir/config.txt
 
@@ -152,16 +160,22 @@ fi
 
 ###
 echo "$name $version ($versionCode)
-Copyright 2017-2023, $author
+Copyright 2017-2023, VR25
+ACC-NG Copyright 2026, Ricardo Pimentel
 GPLv3+
 
 Installing in $installDir/$id/..."
 
 
 # backup
-rm -rf $data_dir/backup 2>/dev/null || :
-mkdir -p $data_dir/backup
-cp -aH /data/adb/$domain/$id/* $config $data_dir/backup/ 2>/dev/null || :
+backup_dir=$data_dir/backup/install-$(date +%Y%m%d-%H%M%S)-$$
+mkdir -p $backup_dir/module
+cp -aH /data/adb/$domain/$id/. $backup_dir/module/ 2>/dev/null || :
+cp -p $config $backup_dir/config.txt 2>/dev/null || :
+# Validate scripts before the existing module is touched.
+for script in $srcDir/install/*.sh; do /system/bin/sh -n "$script"; done
+[ "$(get_prop ngApiVersion)" = 1 ]
+migration_started=true
 
 
 /system/bin/sh $srcDir/install/uninstall.sh install
@@ -198,28 +212,10 @@ if $acca; then
 
   ! $magisk || {
 
-    ln -fs $installDir $accaFiles/
+    ln -sfn "$installDir" "$accaFiles/$id"
 
-    # AccA post-uninstall cleanup script
-    mkdir -p /data/adb/service.d || {
-      rm /data/adb/service.d
-      mkdir /data/adb/service.d
-    }
-    echo "#!/system/bin/sh
-      # acc front-end post-uninstall cleanup script
+    rm -f /data/adb/service.d/${id}-cleanup.sh
 
-      until test -d /sdcard/Android \\
-        && test .\$(getprop sys.boot_completed) = .1
-      do
-        sleep 60
-      done
-
-      sleep 60
-
-      [ -e $accaFiles/$id ] || rm -rf \$0 /data/adb/$domain/$id /data/adb/modules/$id 2>/dev/null
-
-      exit 0" | sed 's/^      //' > /data/adb/service.d/${id}-cleanup.sh
-    chmod 0755 /data/adb/service.d/${id}-cleanup.sh
   }
 fi
 

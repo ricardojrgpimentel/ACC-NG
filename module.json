@@ -1,11 +1,10 @@
 {
-    "busybox": "https://github.com/Magisk-Modules-Repo/busybox-ndk",
-    "changelog": "https://raw.githubusercontent.com/VR-25/acc/master/changelog.md",
-    "curl": "https://github.com/Zackptg5/Cross-Compiled-Binaries-Android/tree/master/curl",
-    "onlineInstaller": "https://github.com/VR-25/acc/releases/download/v2023.10.16/install-online.sh",
-    "tgz": "https://github.com/VR-25/acc/releases/download/v2023.10.16/acc_v2023.10.16_202310160.tgz",
-    "tgzInstaller": "https://github.com/VR-25/acc/releases/download/v2023.10.16/install-tarball.sh",
-    "version": "v2023.10.16",
-    "versionCode": 202310160,
-    "zipUrl": "https://github.com/VR-25/acc/releases/download/v2023.10.16/acc_v2023.10.16_202310160.zip"
+  "version": "v1.0.0-ng",
+  "versionCode": 202610090,
+  "zipUrl": "https://github.com/ricardojrgpimentel/ACC-NG/releases/download/v1.0.0-ng/acc_v1.0.0-ng_202610090.zip",
+  "tgz": "https://github.com/ricardojrgpimentel/ACC-NG/releases/download/v1.0.0-ng/acc_v1.0.0-ng_202610090.tgz",
+  "tgzInstaller": "https://github.com/ricardojrgpimentel/ACC-NG/releases/download/v1.0.0-ng/install-tarball.sh",
+  "onlineInstaller": "https://github.com/ricardojrgpimentel/ACC-NG/releases/download/v1.0.0-ng/install-online.sh",
+  "changelog": "https://raw.githubusercontent.com/ricardojrgpimentel/ACC-NG/main/changelog.md",
+  "sha256": "90ff1acdbcc36cb0b9fc38cdbb1182c8739340c584ab84c3eb9042a80efd5627"
 }

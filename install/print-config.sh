@@ -1,6 +1,8 @@
 set +u
 
-echo "allow_idle_above_pcap=$allowIdleAbovePcap
+echo "ng_notifications=${ngNotifications-true}
+ng_notification_language=${ngNotificationLanguage-en}
+allow_idle_above_pcap=$allowIdleAbovePcap
 amp_factor=$ampFactor
 batt_status_workaround=$battStatusWorkaround
 

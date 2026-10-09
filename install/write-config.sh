@@ -1,5 +1,10 @@
 set +u
 
+ngn=${ng_notifications-${ngNotifications-true}}
+ngl=${ng_notification_language-${ngNotificationLanguage-en}}
+case "$ngn" in true|false) ;; *) ngn=true;; esac
+case "$ngl" in pt|pt-PT|pt-BR|en) ;; *) ngl=en;; esac
+
 ab="${apply_on_boot-${ab-${applyOnBoot[@]}}}"
 af=${amp_factor-${af-$ampFactor}}
 aiapc="${allow_idle_above_pcap-${aiapc-$allowIdleAbovePcap}}"
@@ -52,6 +57,8 @@ printf "\n\n\n" >> $TMPDIR/.scripts
 
 echo "configVerCode=$(cat $TMPDIR/.config-ver)
 
+ngNotifications=$ngn
+ngNotificationLanguage=$ngl
 allowIdleAbovePcap=${aiapc:-true}
 ampFactor=$af
 battStatusWorkaround=${bsw:-true}

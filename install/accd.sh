@@ -259,9 +259,11 @@ if ! $init; then
     while :; do
 
       if is_charging; then
+        ng_observe Charging || :
 
         # disable charging after a reboot, if min < capacity < max
         if $offMid && [ -f $TMPDIR/.minCapMax ] && _lt_pause_cap && _gt_resume_cap; then
+          ng_pause_reason=reboot
           disable_charging
           force_off
           sleep ${loopDelay[1]}
@@ -271,6 +273,7 @@ if ! $init; then
 
         # disable charging under <conditions>
         if [ $(cat $temp) -ge $(( ${temperature[1]} * 10 )) ] || _ge_pause_cap; then
+          if _ge_pause_cap; then ng_pause_reason=limit; else ng_pause_reason=temperature; fi
           if ! $allowIdleAbovePcap && [ $(cat $battCapacity) -gt ${capacity[3]} ]; then
             # if possible, avoid idle mode when capacity > pause_capacity
             (cat $config > $TMPDIR/.cfg
@@ -344,6 +347,7 @@ if ! $init; then
         sleep ${loopDelay[0]}
 
       else
+        ng_observe "${_status:-Discharging}" || :
 
         # enable charging under <conditions>
         if _le_resume_cap && temp_ok; then
@@ -499,6 +503,7 @@ if ! $init; then
 
   # load generic functions
   . $execDir/misc-functions.sh
+  . $execDir/ng-events.sh
 
 
   capacitySync=false

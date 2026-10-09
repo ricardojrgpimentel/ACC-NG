@@ -1,4 +1,6 @@
 configVerCode=202310160
+ngNotifications=true
+ngNotificationLanguage=en
 
 allowIdleAbovePcap=true
 ampFactor=
