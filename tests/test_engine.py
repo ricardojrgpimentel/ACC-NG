@@ -77,7 +77,7 @@ class EngineTests(unittest.TestCase):
         start=installer.index('select_source() {')
         end=installer.index('\n}',start)+len('\n}')
         select=installer[start:end]
-        for folder in ['acc-ng-v1.0.1-ng','ACC-NG-main','ACC-NG-v1.0.1-ng']:
+        for folder in ['acc-ng-v1.0.2-ng','ACC-NG-main','ACC-NG-1.0.2-ng']:
             with tempfile.TemporaryDirectory() as td:
                 archive=pathlib.Path(td)/'source.tgz'
                 with tarfile.open(archive,'w:gz') as tar:
@@ -85,6 +85,11 @@ class EngineTests(unittest.TestCase):
                         info=tarfile.TarInfo(folder+'/'+name);info.size=len(data);tar.addfile(info,io.BytesIO(data))
                 with tarfile.open(archive) as tar:tar.extractall(td,filter='data')
                 self.assertEqual([folder],self.run_shell(f'cd {td}; '+select+'; select_source'))
+                if folder.startswith('ACC-NG-'):
+                    online=(ROOT/'install-online.sh').read_text()
+                    begin=online.index('archive_source() {')
+                    end=online.index('\n}',begin)+len('\n}')
+                    self.assertEqual([folder],self.run_shell(online[begin:end]+f'; archive_source {archive}'))
 
     def test_global_ng_preferences_survive_profile_writes(self):
         with tempfile.TemporaryDirectory() as td:

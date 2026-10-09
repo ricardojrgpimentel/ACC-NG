@@ -1,3 +1,8 @@
+v1.0.2-ng (202610092)
+
+- Read the actual GitHub archive root for tagged online installs (GitHub strips v).
+- Return online install failures instead of reporting success after cleanup.
+
 v1.0.1-ng (202610091)
 
 - Accept both bundled acc-ng-* and GitHub ACC-NG-* source archive folders.

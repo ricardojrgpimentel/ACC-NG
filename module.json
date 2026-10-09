@@ -1,10 +1,10 @@
 {
-  "version": "v1.0.1-ng",
-  "versionCode": 202610091,
-  "zipUrl": "https://github.com/ricardojrgpimentel/ACC-NG/releases/download/v1.0.1-ng/acc_v1.0.1-ng_202610091.zip",
-  "tgz": "https://github.com/ricardojrgpimentel/ACC-NG/releases/download/v1.0.1-ng/acc_v1.0.1-ng_202610091.tgz",
-  "tgzInstaller": "https://github.com/ricardojrgpimentel/ACC-NG/releases/download/v1.0.1-ng/install-tarball.sh",
-  "onlineInstaller": "https://github.com/ricardojrgpimentel/ACC-NG/releases/download/v1.0.1-ng/install-online.sh",
+  "version": "v1.0.2-ng",
+  "versionCode": 202610092,
+  "zipUrl": "https://github.com/ricardojrgpimentel/ACC-NG/releases/download/v1.0.2-ng/acc_v1.0.2-ng_202610092.zip",
+  "tgz": "https://github.com/ricardojrgpimentel/ACC-NG/releases/download/v1.0.2-ng/acc_v1.0.2-ng_202610092.tgz",
+  "tgzInstaller": "https://github.com/ricardojrgpimentel/ACC-NG/releases/download/v1.0.2-ng/install-tarball.sh",
+  "onlineInstaller": "https://github.com/ricardojrgpimentel/ACC-NG/releases/download/v1.0.2-ng/install-online.sh",
   "changelog": "https://raw.githubusercontent.com/ricardojrgpimentel/ACC-NG/main/changelog.md",
-  "sha256": "fbd0f27668dc99d3d37348fad966cba92d25c77934377cf9c226d967546377f8"
+  "sha256": "4f70e4ec67116221169f8d0d22dd009b0d8da1c48237283ce694fddc24379ffd"
 }

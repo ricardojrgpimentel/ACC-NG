@@ -82,6 +82,15 @@ case "$@" in
 esac
 
 
+
+# GitHub strips v from version-tag archive folders. Read the archive instead
+# of guessing from a branch, tag or SHA reference.
+archive_source() {
+  local source=
+  source=$(tar -tzf "$1" | sed -n '1s|/.*||p')
+  case "$source" in ACC-NG-*) printf '%s' "$source";; *) return 1;; esac
+}
+
 commit=$(echo "$*" | sed -E 's/%.*%|-c|--changelog|-f|--force|-k|--insecure|-n|--non-interactive| //g')
 : ${commit:=main}
 
@@ -122,8 +131,14 @@ then
   set +eu
   trap - EXIT
   echo
-  curl -L $insecure $tarball | tar -xz \
-    && ash "ACC-NG-${commit}/install.sh"
+  archive=.acc-ng-online-$$.tgz
+  curl -L $insecure "$tarball" > "$archive" || { rm -f "$archive"; exit 5; }
+  source_dir=$(archive_source "$archive") || { rm -f "$archive"; exit 5; }
+  tar -xzf "$archive" || { rm -f "$archive"; exit 5; }
+  ash "$source_dir/install.sh"
+  install_status=$?
+  rm -rf "$source_dir" "$archive"
+  exit $install_status
 
 else
   echo
