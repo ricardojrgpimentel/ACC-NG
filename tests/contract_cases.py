@@ -19,7 +19,7 @@ def function(filename, name):
     text = source(filename)
     begin = re.search(r'^' + re.escape(name) + r'\(\) \{', text, re.M).start()
     end = text.index('\n}', begin) + 2
-    return text[begin:end]
+    return (source('external-power.sh') + '\n' if name in ('online', 'ng_online') else '') + text[begin:end]
 
 
 def run(commands):
@@ -95,7 +95,10 @@ def collect():
     fixtures['sources'] = {name: hashlib.sha256((ROOT / name).read_bytes()).hexdigest()
         for name in ['install/acca.sh', 'install/acc.sh', 'install/batt-info.sh',
                      'install/batt-interface.sh', 'install/print-config.sh',
-                     'install/default-config.txt', 'install/write-config.sh', 'install/set-prop.sh']}
+                     'install/default-config.txt', 'install/write-config.sh', 'install/set-prop.sh',
+                     'install/external-power.sh', 'install/control-discovery.sh', 'install/ng-power-limits.sh',
+                     'install/limit-control.sh', 'install/control-write.sh', 'install/set-ch-curr.sh',
+                     'install/set-ch-volt.sh', 'install/accd.sh', 'install/ng-events.sh', 'install/misc-functions.sh']}
     fixtures['config']['default'] = config_case()
     fixtures['config']['profile'] = config_case('''
 ngNotifications=false; ngNotificationLanguage=pt-PT
@@ -142,6 +145,19 @@ n=0
         function('set-prop.sh', 'set_prop') + '\nset_prop s:')
     fixtures['daemon']['already-running'] = run('flock() { return 1; }; print_already_running() { echo "Already running"; }\n' +
         function('acc.sh', 'daemon_ctrl') + '\ndaemon_ctrl start')
+    fixtures['power-limits'] = {}
+    for name in ['pending', 'unsupported', 'applied', 'drift', 'off', 'failed']:
+        script = source('external-power.sh') + source('control-discovery.sh') + source('ng-power-limits.sh')
+        script += '\nmkdir battery usb; echo 1 > usb/online; echo 500 > battery/current_max\n'
+        script += 'maxChargingCurrent=(500); maxChargingVoltage=()\n'
+        if name != 'pending':
+            script += 'touch .ch-curr-read; echo battery/current_max::v::1800 > ch-curr-ctrl-files\n'
+        if name == 'unsupported': script += ': > ch-curr-ctrl-files\n'
+        if name in ['applied', 'drift']: script += 'ng_limit_result current 500 applied\n'
+        if name == 'drift': script += 'echo 700 > battery/current_max\n'
+        if name == 'failed': script += 'ng_limit_result current 500 failed\n'
+        if name == 'off': script += 'maxChargingCurrent=()\n'
+        fixtures['power-limits'][name] = run(script + 'ng_print_power_limits')
     return fixtures
 
 

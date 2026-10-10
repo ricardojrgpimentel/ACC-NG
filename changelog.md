@@ -1,3 +1,20 @@
+# v1.0.6-ng (local candidate, unreleased)
+
+- Discover current/voltage controls without chmod or waiting for a charger;
+  preserve per-boot caches/original snapshots and deduplicate node aliases.
+- Capture all original control values before any write, including distinct
+  sysfs nodes sharing one OEM driver setting.
+- Use final upstream discovery blacklist and validate automatic candidates,
+  including cached parsed switches and thermal-level references.
+- Apply the latest saved request under the frontend lock without queuing stale
+  setters; automatic switch writes preserve fresh settings and manual choices.
+- Share connected/disconnected/unknown semantics across controller, events and
+  generated frontend helper, ignoring internal Battery/BMS/OTG sources.
+- Add power-limits-status capability / acca --power-status readback. Applied
+  requires successful control writes and matching nodes, not measured current.
+- Preserve API 1/schema, manual calibration, profiles and the thermal r suffix.
+  Synthetic host/Android validation only; live I3 installation/sysfs pending.
+
 # v1.0.5-ng (candidate, unreleased)
 
 - Declare NG API 1 capabilities and configuration schema separately from release dates.

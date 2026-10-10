@@ -55,8 +55,10 @@ language to match its UI. Saved profiles preserve these global engine preference
 
 See [the original documentation](README.upstream.md) for ACC's supported controls.
 Changes after upstream v2023.10.16 require separate device compatibility review.
-The v1.0.5-ng candidate includes I1, which selectively adapts limit ownership/reset handling and
-excludes store_mode; the upstream schema/API changes are not included. See
+The v1.0.6-ng local candidate includes I1 resets/permissions, I2 API fixtures
+and I3 validated discovery/cache, shared incoming-power semantics and explicit
+control readback. The upstream schema/API changes are not included; physical I3
+validation is recorded separately from synthetic fixtures. See
 [the integration record](docs/upstream-integration.md).
 
 

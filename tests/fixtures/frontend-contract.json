@@ -2,10 +2,10 @@
   "version": {
     "current": {
       "code": 0,
-      "output": "v1.0.5-ng (202610095)"
+      "output": "v1.0.6-ng (202610106)"
     }
   },
-  "module": "id=acc\ndomain=vr25\nname=Advanced Charging Controller NG (ACC-NG)\nversion=v1.0.5-ng\nversionCode=202610095\nauthor=Ricardo Pimentel; based on ACC by VR25\ndescription=Charging controller for AccA-NG. Applies charging limits and temperature settings configured in the app and keeps control active in the background.\nupdateJson=https://raw.githubusercontent.com/ricardojrgpimentel/ACC-NG/main/module.json\nngApiVersion=1\nupstreamVersionCode=202310160\nngConfigSchema=202310160\nngCapabilities=info-key-value-si,capacity-six,resume-temperature,resume-temperature-override,manual-discharge-polarity,ng-notifications",
+  "module": "id=acc\ndomain=vr25\nname=Advanced Charging Controller NG (ACC-NG)\nversion=v1.0.6-ng\nversionCode=202610106\nauthor=Ricardo Pimentel; based on ACC by VR25\ndescription=Charging controller for AccA-NG. Applies charging limits and temperature settings configured in the app and keeps control active in the background.\nupdateJson=https://raw.githubusercontent.com/ricardojrgpimentel/ACC-NG/main/module.json\nngApiVersion=1\nupstreamVersionCode=202310160\nngConfigSchema=202310160\nngCapabilities=info-key-value-si,capacity-six,resume-temperature,resume-temperature-override,manual-discharge-polarity,ng-notifications,power-limits-status",
   "config": {
     "default": {
       "code": 0,
@@ -103,13 +103,49 @@
     }
   },
   "sources": {
-    "install/acca.sh": "a325c45e4743e68d9066ffe5c27adb04eb834e2875cc356755b26d75be22657e",
-    "install/acc.sh": "9328f81a1698a6d0aab18934b1275c146d23f3422635403583e5883ac8a30ce6",
+    "install/acca.sh": "8eaf8ee9cc6336071f1b62a77a166cc162a8be256fa8324bb87dd0ad501936f4",
+    "install/acc.sh": "24f887fc26df13504e1384e7576eff3aa55444fedc0ce3f3f56823d0ab07e6f7",
     "install/batt-info.sh": "91cb30bc20f325557161709b8296bac12a700839d7c496e8d20f783da2814af1",
-    "install/batt-interface.sh": "7f083f91a3365e84e6b03180713ed2c5d6815cb3c52f2d206977fd4f5a167d5d",
+    "install/batt-interface.sh": "a920d9f944038e6600600bd11391e989a80eeb2b91a426f34d142a2ae1edfbf9",
     "install/print-config.sh": "00e297b859ca809819f36ad7a4a88b189d7df950d2da2be14b286b9a508e7cba",
     "install/default-config.txt": "c92d7b9ab43678eb311d2de4b53a0342d8df024801387cfa46a86666f97fc12e",
     "install/write-config.sh": "3cc17b8dc0daffc610669381219d914fd8fb1932ce47e75489081ab77d6daee6",
-    "install/set-prop.sh": "15fbc94f1a88d19bc692089aca9208a5bfb145624a55007b66316a16ca73bc80"
+    "install/set-prop.sh": "15fbc94f1a88d19bc692089aca9208a5bfb145624a55007b66316a16ca73bc80",
+    "install/external-power.sh": "c03a4131a9fc049010d6afdc8e93ee679b18cc6005871fff93876e0fc255edce",
+    "install/control-discovery.sh": "676b04d522768224d1c604b42bdb2556eaa75e2d9415b74c66aee065f83b3059",
+    "install/ng-power-limits.sh": "2d3d56137f3a9930cbc299b2c55bf195f4285b214830b63467278d4b14979da4",
+    "install/limit-control.sh": "5e20599de5a50a648f19d276a9fa4bfdf5ca6bebe75fa7383c807d782f08754f",
+    "install/control-write.sh": "335871d35819a787c536e87d47c6b96658f59ada2bcaa3aadebdd4d899e40b27",
+    "install/set-ch-curr.sh": "a27a3388a2c75835c88ea4171c0d98fe84a543a290a7369a0181e80311076a95",
+    "install/set-ch-volt.sh": "0457307c69d1ee965eed9f73824028c7a732edb58311a9e1f285392344633a36",
+    "install/accd.sh": "f1214155a63b3e17e088d7b6302a6f1184ede26ee43652826b14375d3b5e3d59",
+    "install/ng-events.sh": "835849d54a8821d3796b0a67c7314faa9e5622aefefd30491ecf1faab9a94204",
+    "install/misc-functions.sh": "8192eb5bbf38c65ed76018bc4843ca47f99e331b451eb75ff1375806c74ab3d0"
+  },
+  "power-limits": {
+    "pending": {
+      "code": 0,
+      "output": "powerLimitsVersion=1\nonline=true\ncurrent.requested=500\ncurrent.supported=unknown\ncurrent.state=pending\nvoltage.requested=default\nvoltage.supported=unknown\nvoltage.state=off"
+    },
+    "unsupported": {
+      "code": 0,
+      "output": "powerLimitsVersion=1\nonline=true\ncurrent.requested=500\ncurrent.supported=false\ncurrent.state=unsupported\nvoltage.requested=default\nvoltage.supported=unknown\nvoltage.state=off"
+    },
+    "applied": {
+      "code": 0,
+      "output": "powerLimitsVersion=1\nonline=true\ncurrent.requested=500\ncurrent.supported=true\ncurrent.state=applied\nvoltage.requested=default\nvoltage.supported=unknown\nvoltage.state=off"
+    },
+    "drift": {
+      "code": 0,
+      "output": "powerLimitsVersion=1\nonline=true\ncurrent.requested=500\ncurrent.supported=true\ncurrent.state=failed\nvoltage.requested=default\nvoltage.supported=unknown\nvoltage.state=off"
+    },
+    "off": {
+      "code": 0,
+      "output": "powerLimitsVersion=1\nonline=true\ncurrent.requested=default\ncurrent.supported=true\ncurrent.state=off\nvoltage.requested=default\nvoltage.supported=unknown\nvoltage.state=off"
+    },
+    "failed": {
+      "code": 0,
+      "output": "powerLimitsVersion=1\nonline=true\ncurrent.requested=500\ncurrent.supported=true\ncurrent.state=failed\nvoltage.requested=default\nvoltage.supported=unknown\nvoltage.state=off"
+    }
   }
 }

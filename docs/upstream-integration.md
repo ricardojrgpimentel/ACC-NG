@@ -72,3 +72,38 @@ No installed app, module, profile or charging configuration is updated by I2.
 
 Still pending: R1.2 cache/discovery, R1.4 physical application readback,
 R2 sensor/charger unification, and the physical upgrade/rollback/reboot matrix.
+
+
+## I3 — discovery, incoming power and control readback
+
+10 October 2026. Unreleased candidate **v1.0.6-ng (202610106)** over `2d969cb`.
+The app's bundle provenance pins the final engine source commit.
+API 1/schema 202310160 remain unchanged.
+
+- R1.2: bounded discovery and cache per boot/type, strict numeric readings,
+  original ownership snapshots, alias deduplication and explicit lack of support.
+- R1.4: deferred offline requests and additive `power-limits-status` capability.
+  `acca --power-status` reports requested value, support and state. Applied means
+  nodes match after successful writes; drift/refused readback is failed.
+- R2.1: final upstream acc -p blacklist, live candidate validation and thermal
+  reference validation. No discovery chmod or fallback to arbitrary nodes.
+- R2.4: external-power.sh is shared with events and generated Kotlin frontend.
+  A connected source wins; incomplete sources do not prove disconnection.
+
+The daemon applies the latest config under the frontend lock rather than
+queuing setters which later rewrite an old profile. Saving automatic selection
+re-reads config and respects a manual choice. Global atomic writes, imports and
+legacy CLI concurrency remain R4. Explicit boot/plug scripts retain their flow.
+
+Sources adapted: 07a3a8d/e89c463/486aa90/a74d83b (R1),
+d8cf7bb/e00ba35/67ec354/52265a1/7784280/6b308d8 (R2.1).
+Only the incoming-power part of mixed 9cdf64f is covered; polarity/optional
+features remain R3/R6. New switches and alternative sensors remain R2.2/R2.3.
+
+Synthetic Android tests use generated files under /data/local/tmp, never live
+sysfs. A limited Samsung physical trial passed upgrade/config preservation and
+readback of refused current writes; voltage discovery remained pending during
+cooldown. The original config was restored. The app's I3 record identifies the
+installed runtime and exact test scope, including an inherited staging cleanup
+bug still open in R5.3. Actual limits/reset, OEM policy and the full rollback
+matrix remain pending before distribution.

@@ -16,7 +16,7 @@ class ContractTests(unittest.TestCase):
         self.assertEqual(expected, self.actual)
 
     def test_version_dispatch_matches_release_identity(self):
-        self.assertEqual({"code": 0, "output": "v1.0.5-ng (202610095)"}, self.actual["version"]["current"])
+        self.assertEqual({"code": 0, "output": "v1.0.6-ng (202610106)"}, self.actual["version"]["current"])
 
     def test_default_schema_and_output_are_preserved(self):
         output = self.actual['config']['default']['output']
@@ -108,7 +108,7 @@ capacity=(2 101 50 60 false false)
         fields = dict(line.split('=', 1) for line in self.actual['module'].splitlines())
         self.assertEqual('1', fields['ngApiVersion'])
         self.assertEqual('202310160', fields['ngConfigSchema'])
-        self.assertEqual(6, len(fields['ngCapabilities'].split(',')))
+        self.assertEqual(7, len(fields['ngCapabilities'].split(',')))
         self.assertNotIn('idle-apps', fields['ngCapabilities'])
 
     def test_shell_status_handles_polarity_and_current_units(self):

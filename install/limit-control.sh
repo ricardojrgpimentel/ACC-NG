@@ -38,6 +38,7 @@ apply_limit() (
   # mksh closes auxiliary descriptors for child commands; pass the lock on stdin.
   timeout 5 flock 0 <&9 || return 1
   finish_limit() {
+    rm -f "$marker.before"
     # A signal/explicit exit during a write must not discard its original value.
     if [ "$action" != default ] && [ -f "$marker.new" ]; then
       if [ -n "$pendingFile" ] && [ -z "$saved" ] \
@@ -75,6 +76,17 @@ apply_limit() (
     else
       : > "$marker.new" || return 1
     fi
+    # Different sysfs paths can share an OEM driver setting even when their
+    # canonical paths differ. Snapshot every target before the first write;
+    # otherwise writing A can make us learn its personalised value via B.
+    : > "$marker.before" || return 1
+    for entry in "$@"; do
+      case "$entry" in *::*::*) :;; *) continue;; esac
+      file=${entry%%::*}
+      original=$(cat "$file" 2>/dev/null) || { failed=1; continue; }
+      [ -n "$original" ] || { failed=1; continue; }
+      printf '%s::%s\n' "$file" "$original" >> "$marker.before"
+    done
     for entry in "$@"; do
       case "$entry" in *::*::*) :;; *) continue;; esac
       file=${entry%%::*}
@@ -87,7 +99,9 @@ apply_limit() (
         fi
       done < "$marker.new"
       if [ -z "$original" ]; then
-        original=$(cat "$file" 2>/dev/null) || { failed=1; continue; }
+        while IFS= read -r before; do
+          if [ "${before%%::*}" = "$file" ]; then original=${before#*::}; break; fi
+        done < "$marker.before"
         [ -n "$original" ] || { failed=1; continue; }
         saved=
       fi

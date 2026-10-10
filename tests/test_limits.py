@@ -15,7 +15,7 @@ class LimitTests(unittest.TestCase):
             fixture = Path(td)
             script = '''set -eu
 mkdir -p battery logs
-TMPDIR=$PWD; dataDir=$PWD
+TMPDIR=$PWD; dataDir=$PWD; config=$PWD/config; execDir=$PWD
 verbose=true; isAccd=true; tempLevel=0
 applyOnBoot=(); applyOnPlug=(); maxChargingCurrent=(); maxChargingVoltage=()
 oppositeValue=
@@ -27,9 +27,15 @@ print_curr_set() { :; }; print_curr_restored() { :; }
 '''
             # Only function definitions: do not initialise the actual ACC module.
             misc = (ROOT / 'install/misc-functions.sh').read_text().split('# environment')[0]
-            misc = misc.replace('. $execDir/limit-control.sh', (ROOT / 'install/limit-control.sh').read_text())
+
+            for helper in ['limit-control.sh', 'control-discovery.sh', 'ng-power-limits.sh']:
+                misc = misc.replace('. $execDir/' + helper, (ROOT / 'install' / helper).read_text())
+            misc = misc.replace('. \"$execDir/control-write.sh\"', (ROOT / 'install/control-write.sh').read_text())
             batt = (ROOT / 'install/batt-interface.sh').read_text().split('if ${init:-false}; then')[0]
-            script += misc + batt
+            batt = batt.replace('. "$execDir/external-power.sh"', (ROOT / 'install/external-power.sh').read_text())
+            for name in ['ctrl-files.sh', 'write-config.sh']:
+                script += 'printf %s ' + shlex.quote((ROOT / 'install' / name).read_text()) + ' > ' + name + '\n'
+            script += misc + batt + '\nnot_charging() { return 1; }\n'
             script += (ROOT / 'install/set-ch-curr.sh').read_text()
             script += (ROOT / 'install/set-ch-volt.sh').read_text()
             script += commands
@@ -91,7 +97,7 @@ echo "$(cat battery/current):$(cat battery/voltage):$(cat battery/script)"
     def test_voltage_changes_do_not_apply_boot_scripts(self):
         self.assertEqual(['4000:9', '4200:9'], self.run_shell('''
 echo 4200 > battery/voltage; echo 9 > battery/script
-echo battery/voltage::v::4200 > ch-volt-ctrl-files
+echo battery/voltage::v::4200 > ch-volt-ctrl-files; touch .ch-volt-read
 applyOnBoot=(battery/script::1::0)
 set_ch_volt 4000
 echo "$(cat battery/voltage):$(cat battery/script)"
@@ -279,3 +285,14 @@ cat battery/current; test ! -e .mcc-custom
     def test_store_mode_is_excluded_from_auto_candidates(self):
         source = (ROOT / 'install/ctrl-files.sh').read_text()
         self.assertNotIn('battery/store_mode 0 1', [line for line in source.splitlines() if not line.startswith('#')])
+
+    def test_shared_driver_values_are_captured_before_any_write(self):
+        self.assertEqual(['battery/a::1800', 'battery/b::1800', '1800:1800'], self.run_shell('''
+echo 1800 > battery/a; echo 1800 > battery/b
+# Distinct files represent sysfs attributes backed by the same driver value.
+write() { echo "$1" > battery/a; echo "$1" > battery/b; }
+apply_limit current value battery/a::500::1800 battery/b::500::1800
+cat .mcc-custom
+apply_limit current default
+echo "$(cat battery/a):$(cat battery/b)"
+'''))

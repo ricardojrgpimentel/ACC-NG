@@ -64,7 +64,28 @@ esac
 export config execDir TMPDIR verbose
 
 
+# Frontend writes share the property writer's bounded mutex.
+case "${1-} ${2-}" in
+  '-s --current'|'--set --current')
+    [ "$#" != 3 ] || set -- --set "max_charging_current=$3";;
+  '-s --voltage'|'--set --voltage')
+    [ "$#" != 3 ] || set -- --set "max_charging_voltage=$3";;
+esac
+
 case "$@" in
+
+  --power-status)
+    # Read coherently; a busy writer is unavailable, not physical success.
+    exec 6>"$TMPDIR/.ng-config.lock" || exit 1
+    flock -n 0 <&6 || exit 1
+    /system/bin/sh -n "$config" || exit 1
+    . "$config"
+    . "$execDir/external-power.sh"
+    . "$execDir/control-discovery.sh"
+    . "$execDir/ng-power-limits.sh"
+    ng_print_power_limits
+    exit 0
+  ;;
 
   # check daemon status
   -D*|--daemon*)
@@ -90,13 +111,20 @@ case "$@" in
     }
 
     set +o sh 2>/dev/null || :
-    exec 4<>$0
-    flock 0 <&4
+    exec 4>"$TMPDIR/.ng-config.lock"
+    timeout 5 flock 0 <&4 || exit 1
     shift
 
     . $defaultConfig
     src_cfg
 
+    . "$execDir/limit-control.sh"
+    . "$execDir/control-write.sh"
+    . "$execDir/control-discovery.sh"
+    . "$execDir/ng-power-limits.sh"
+    . "$execDir/set-ch-curr.sh"
+    . "$execDir/set-ch-volt.sh"
+    . "$execDir/batt-interface.sh"
     export "$@"
 
     [ .${mcc-${max_charging_current-x}} = .x ] || {

@@ -225,7 +225,7 @@ parse_switches() {
       enable) n="$n disable";;
       enabled) n="$n disabled";;
       DISABLE) n="$n ENABLE";;
-      DISABLED) n="$n DISABLED";;
+      DISABLED) n="$n ENABLED";;
       ENABLE) n="$n DISABLE";;
       ENABLED) n="$n DISABLED";;
       *) continue;;
@@ -236,9 +236,11 @@ parse_switches() {
     # exclude all known switches
     ! grep -q "$i " $1 || continue
 
-    i="$(echo "$i $n" | grep -Eiv 'brightness|curr|online|present|runtime|status|temp|volt|wakeup|[^pP]reset|daemon|calibrat|init|resistance|capacitance|shutdown|parallel|cycle|shutdown|reboot|nvram|count|disk|mem_state|user|factory|timer|flash|otg|authentic|update|demo|report|info|mask')" || :
+    i="$(echo "$i $n" | grep -Eiv 'authentic|brightness|calibrat|capacitance|count|curr|cycle|daemon|demo|design|detect|disk|empty|factory|fast|fcc|flash|full|info|init|learn|mask|moist|nvram|online|otg|parallel|present|priority|protect|reboot|refcnt|report|resistance|reset|reverse|scale|time|rx_|ship|shutdown|state|status|step|sync|temp|timer|tx_|type|update|user|vbus|verif|volt|wait|wake|runtime|mem_state|store_mode')" || :
 
-    [ -z "$i" ] || echo "$i"
+    [ -z "$i" ] || {
+      (set -- $i; ng_filter_switch "$1" "$2" "$3") || :
+    }
 
   done
 

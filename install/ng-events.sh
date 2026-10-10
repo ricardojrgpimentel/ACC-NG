@@ -1,16 +1,11 @@
+. "$execDir/external-power.sh"
+
 # ACC-NG events. Copyright 2026 Ricardo Pimentel. GPLv3+.
 # Inspired by Ian7672's event notifications; independently implemented on ACC.
 # This file never switches charging, changes thresholds or invokes shutdown.
 
 ng_online() {
-  local file= value= seen=false
-  for file in */online; do
-    case "$file" in bms/*|battery/*|otg/*) continue;; esac
-    value=$(cat "$file" 2>/dev/null) || continue
-    case "$value" in 1) return 0;; 0) seen=true;; esac
-  done
-  $seen && return 1
-  return 2
+  ng_power_state
 }
 
 ng_emit() {

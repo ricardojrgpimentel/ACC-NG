@@ -130,8 +130,7 @@ if ! $init; then
           sed -i "\|^${chargingSwitch[*]}$|d" $TMPDIR/ch-switches
           echo "${chargingSwitch[*]}" >> $TMPDIR/ch-switches
         fi
-        $TMPDIR/acca --set charging_switch=
-        chargingSwitch=()
+        if ng_save_switch ""; then chargingSwitch=(); else src_cfg; fi
       fi
       # [auto mode] set charging switch
       if [ -z "${chargingSwitch[0]-}" ]; then
@@ -178,22 +177,6 @@ if ! $init; then
           chCurrRead=true
         fi
       }
-
-      # set charging current control files, as needed
-      if $chCurrRead && [ -n "${maxChargingCurrent[0]-}" ] \
-        && { [ -z "${maxChargingCurrent[1]-}" ] || tt "${maxChargingCurrent[1]-}" "-*"; } \
-        && grep -q / $TMPDIR/ch-curr-ctrl-files 2>/dev/null
-      then
-        $TMPDIR/acca --set max_charging_current=${maxChargingCurrent[0]}
-      fi
-
-       # set charging voltage control files, as needed
-      if [ -n "${maxChargingVoltage[0]-}" ] \
-        && { [ -z "${maxChargingVoltage[1]-}" ] || tt "${maxChargingVoltage[1]-}" "-*"; } \
-        && grep -q / $TMPDIR/ch-volt-ctrl-files 2>/dev/null
-      then
-        $TMPDIR/acca --set max_charging_voltage=${maxChargingVoltage[0]}
-      fi
 
       $cooldown || {
         resetBattStatsOnUnplug=true
@@ -559,23 +542,8 @@ else
 
   # filter out missing and problematic charging switches (those with unrecognized values)
 
-  filter_sw() {
-    local over3=false
-    [ $# -gt 3 ] && over3=true
-    for f in $(echo $1); do
-      if [ -f "$f" ] && chmod a+r $f 2>/dev/null \
-        && {
-          ! cat $f > /dev/null 2>&1 \
-          || [ -z "$(cat $f 2>/dev/null)" ] \
-          || grep -Eiq '^([0-9]+|0 0|0 1|(en|dis)abl(e|ed))$' $f
-        }
-      then
-        $over3 && printf "$f $2 $3 " || printf "$f $2 $3\n"
-      else
-        return 1
-      fi
-    done
-  }
+  . "$execDir/control-discovery.sh"
+  filter_sw() { ng_filter_switch "$@"; }
 
 
   # log
@@ -669,23 +637,25 @@ else
   sed -i -e 's/ $//' -e '/^$/d' $TMPDIR/ch-switches_
 
 
-  # read charging voltage control files
-  : > $TMPDIR/ch-volt-ctrl-files_
-  ls -1 $(ls_volt_ctrl_files | grep -Ev '^#|^$') 2>/dev/null | \
-    while read file; do
-      chmod a+r $file 2>/dev/null && grep -Eq '^4[1-4][0-9]{2}' $file || continue
-      grep -q '.... ....' $file && continue
-      echo ${file}::$(sed -n 's/^..../v/p' $file)::$(cat $file) \
-        >> $TMPDIR/ch-volt-ctrl-files_
+  # Keep caches/ownership across restarts. Normal loop discovers while charging.
+  # Validate every candidate, including old parsed.log entries.
+  : > "$TMPDIR/ch-switches.valid"
+  while IFS= read -r candidate; do
+    set -f
+    set -- $candidate
+    set +f
+    [ "$#" -ge 3 ] || continue
+    valid=true; group=
+    while [ "$#" -ge 3 ]; do
+      if part=$(ng_filter_switch "$1" "$2" "$3"); then group="$group $part"
+      else valid=false; break; fi
+      shift 3
     done
-
-
-  # exclude troublesome ctrl files
-  rm $TMPDIR/.ch-curr-read $TMPDIR/ch-curr-ctrl-files 2>/dev/null
-  for file in $TMPDIR/ch-*_; do
-    sort -u $file | grep -Eiv 'parallel|::-|bq[0-9].*/current_max' > ${file%_}
-    rm $file
-  done
+    [ "$#" = 0 ] || valid=false
+    $valid && printf '%s\n' "${group# }" >> "$TMPDIR/ch-switches.valid"
+  done < "$TMPDIR/ch-switches_"
+  sort -u "$TMPDIR/ch-switches.valid" > "$TMPDIR/ch-switches"
+  rm -f "$TMPDIR/ch-switches_" "$TMPDIR/ch-switches__" "$TMPDIR/ch-switches.valid"
 
 
   # prepare default config help text and version code for oem-custom.sh and write-config.sh

@@ -36,7 +36,7 @@ class EngineTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             p=pathlib.Path(td);(p/'battery').mkdir();(p/'usb').mkdir();(p/'bms').mkdir()
             (p/'battery/cap').write_text('60');(p/'battery/temp').write_text('300')
-            script=f'cd {td}; TMPDIR={td}; dataDir={td}; battCapacity=battery/cap; temp=battery/temp; capacity=(2 101 50 60 false false); temperature=(35 50 45 55)\n'
+            script=f'cd {td}; execDir={ROOT}/install; TMPDIR={td}; dataDir={td}; battCapacity=battery/cap; temp=battery/temp; capacity=(2 101 50 60 false false); temperature=(35 50 45 55)\n'
             script+=f'. {ROOT}/install/ng-events.sh\nng_emit() {{ echo "$1:$2"; }}\n'+commands
             return self.run_shell(script)
 
@@ -60,7 +60,7 @@ class EngineTests(unittest.TestCase):
             p=pathlib.Path(td)
             for name,value in [('battery','1'),('otg','1'),('usb','0')]:
                 (p/name).mkdir();(p/name/'online').write_text(value)
-            script=f'cd "{td}"; '+source[start:end]
+            script=f'cd "{td}"; '+(ROOT/'install/external-power.sh').read_text() + '\n' + source[start:end]
             self.assertEqual(['OFFLINE'],self.run_shell(script+'; if online; then echo ONLINE; else echo OFFLINE; fi'))
             (p/'usb/online').write_text('1')
             self.assertEqual(['ONLINE'],self.run_shell(script+'; if online; then echo ONLINE; else echo OFFLINE; fi'))
@@ -90,7 +90,7 @@ class EngineTests(unittest.TestCase):
     def test_disabled_notifications_still_record_diagnostics(self):
         with tempfile.TemporaryDirectory() as td:
             pathlib.Path(td,'logs').mkdir()
-            self.run_shell(f'dataDir={td}; ngNotifications=false; . {ROOT}/install/ng-events.sh; ng_emit low "Battery low: 19%" "Bateria fraca: 19%"')
+            self.run_shell(f'execDir={ROOT}/install; dataDir={td}; ngNotifications=false; . {ROOT}/install/ng-events.sh; ng_emit low "Battery low: 19%" "Bateria fraca: 19%"')
             self.assertIn('low Battery low: 19%',pathlib.Path(td,'logs/ng-events.log').read_text())
 
     def test_non_percent_limits_and_state_are_observable(self):

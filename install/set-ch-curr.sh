@@ -1,85 +1,37 @@
 set_ch_curr() {
-
-  local verbose=${verbose:-true}
-
-  # A default request must neither discover controls nor wait for a charger.
-  if [ "${1-}" = - ] && [ ! -s "$TMPDIR/.mcc-custom" ]; then
-    maxChargingCurrent=()
-    max_charging_current=
-    return 0
-  fi
+  local requested= entries= code=
   if [ -z "${1-}" ]; then
-    ! ${isAccd:-false} || verbose=false
-    ! $verbose && echo ${maxChargingCurrent[0]-} \
-      || echo "${maxChargingCurrent[0]:-$(print_default)}$(print_mA)"
+    ! ${verbose:-true} && echo "${maxChargingCurrent[0]-}" ||
+      echo "${maxChargingCurrent[0]:-$(print_default)}$(print_mA)"
     return 0
   fi
-
-  $verbose || {
-    exxit() { exit $?; }
-    . $execDir/misc-functions.sh
-  }
-
-  ! ${isAccd:-false} || verbose=false
-
-  # check support
-  if [ "${1-}" != - ] && { [ ! -f $TMPDIR/.ch-curr-read ] \
-    || ! grep -q / $TMPDIR/ch-curr-ctrl-files 2>/dev/null; }
-  then
-    if not_charging; then
-      ! $verbose || {
-        print_read_curr
-        print_wait_plug
-        echo
-      }
-      (while not_charging; do sleep 1; set +x; done)
+  if [ "$1" = - ]; then
+    if apply_limit current default; then
+      maxChargingCurrent=(); unset max_charging_current mcc
+      ng_limit_result current default off
+      return 0
     fi
-    . $execDir/read-ch-curr-ctrl-files-p2.sh
-    grep -q / $TMPDIR/ch-curr-ctrl-files || {
-      ! $verbose || print_no_ctrl_file
-      return 1
-    }
+    ng_limit_result current default failed
+    return 1
   fi
-
-  if [ -n "${1-}" ]; then
-
-    # restore
-    if [ $1 = - ]; then
-      apply_limit current default || return 1
-      maxChargingCurrent=()
-      max_charging_current=
-      ! $verbose || print_curr_restored
-
-    else
-
-      apply_current() {
-        eval "
-          if [ $1 -ne 0 ]; then
-            maxChargingCurrent=($1 $(sed "s|::v|::$1|" $TMPDIR/ch-curr-ctrl-files))
-          else
-            maxChargingCurrent=($1 $(sed "s|::v.*::|::$1::|" $TMPDIR/ch-curr-ctrl-files))
-          fi
-        " \
-          && unset max_charging_current mcc \
-          && apply_limit current value "${maxChargingCurrent[@]}" \
-          && {
-            ! $verbose || print_curr_set $1
-          } || return 1
-      }
-
-      # [0-9999] milliamps range
-      if [ $1 -ge 0 -a $1 -le 9999 ]; then
-        apply_current $1 || return 1
-      else
-        ! $verbose || echo "[0-9999]$(print_mA; print_only)"
-        return 11
-      fi
-    fi
-
+  requested=$(ng_uint "$1") || return 11
+  [ "$requested" -le 9999 ] || return 11
+  maxChargingCurrent=("$requested")
+  unset max_charging_current mcc
+  if ng_discover_controls current; then :
   else
-    # print current value
-    ! $verbose && echo ${maxChargingCurrent[0]-} \
-      || echo "${maxChargingCurrent[0]:-$(print_default)}$(print_mA)"
-    return 0
+    code=$?
+    [ "$code" = 2 ] && { ng_limit_result current "$requested" pending; return 0; }
+    ng_limit_result current "$requested" failed; return 1
+  fi
+  if [ ! -s "$TMPDIR/ch-curr-ctrl-files" ]; then
+    ng_limit_result current "$requested" unsupported; return 1
+  fi
+  entries=$(ng_resolve_limit current "$requested") || return 1
+  maxChargingCurrent=("$requested" $entries)
+  if apply_limit current value "${maxChargingCurrent[@]}"; then
+    ng_limit_result current "$requested" applied
+  else
+    ng_limit_result current "$requested" failed; return 1
   fi
 }
