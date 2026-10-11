@@ -93,7 +93,8 @@ def collect():
     fixtures['version']['current'] = run('accVer=' + shlex.quote(props['version']) +
         '; accVerCode=' + shlex.quote(props['versionCode']) + '\n' + version_body)
     fixtures['sources'] = {name: hashlib.sha256((ROOT / name).read_bytes()).hexdigest()
-        for name in ['install/acca.sh', 'install/acc.sh', 'install/batt-info.sh',
+        for name in ['install.sh', 'install/uninstall.sh', 'install-tarball.sh', 'install-online.sh',
+                     'install/acca.sh', 'install/acc.sh', 'install/batt-info.sh',
                      'install/batt-interface.sh', 'install/print-config.sh',
                      'install/default-config.txt', 'install/write-config.sh', 'install/set-prop.sh',
                      'install/external-power.sh', 'install/control-discovery.sh', 'install/ng-power-limits.sh',

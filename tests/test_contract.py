@@ -16,7 +16,7 @@ class ContractTests(unittest.TestCase):
         self.assertEqual(expected, self.actual)
 
     def test_version_dispatch_matches_release_identity(self):
-        self.assertEqual({"code": 0, "output": "v1.0.6-ng (202610106)"}, self.actual["version"]["current"])
+        self.assertEqual({"code": 0, "output": "v1.0.7-ng (202610117)"}, self.actual["version"]["current"])
 
     def test_default_schema_and_output_are_preserved(self):
         output = self.actual['config']['default']['output']

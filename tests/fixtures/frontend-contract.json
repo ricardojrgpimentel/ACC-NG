@@ -2,10 +2,10 @@
   "version": {
     "current": {
       "code": 0,
-      "output": "v1.0.6-ng (202610106)"
+      "output": "v1.0.7-ng (202610117)"
     }
   },
-  "module": "id=acc\ndomain=vr25\nname=Advanced Charging Controller NG (ACC-NG)\nversion=v1.0.6-ng\nversionCode=202610106\nauthor=Ricardo Pimentel; based on ACC by VR25\ndescription=Charging controller for AccA-NG. Applies charging limits and temperature settings configured in the app and keeps control active in the background.\nupdateJson=https://raw.githubusercontent.com/ricardojrgpimentel/ACC-NG/main/module.json\nngApiVersion=1\nupstreamVersionCode=202310160\nngConfigSchema=202310160\nngCapabilities=info-key-value-si,capacity-six,resume-temperature,resume-temperature-override,manual-discharge-polarity,ng-notifications,power-limits-status",
+  "module": "id=acc\ndomain=vr25\nname=Advanced Charging Controller NG (ACC-NG)\nversion=v1.0.7-ng\nversionCode=202610117\nauthor=Ricardo Pimentel; based on ACC by VR25\ndescription=Charging controller for AccA-NG. Applies charging limits and temperature settings configured in the app and keeps control active in the background.\nupdateJson=https://raw.githubusercontent.com/ricardojrgpimentel/ACC-NG/main/module.json\nngApiVersion=1\nupstreamVersionCode=202310160\nngConfigSchema=202310160\nngCapabilities=info-key-value-si,capacity-six,resume-temperature,resume-temperature-override,manual-discharge-polarity,ng-notifications,power-limits-status",
   "config": {
     "default": {
       "code": 0,
@@ -103,6 +103,10 @@
     }
   },
   "sources": {
+    "install.sh": "1927489b8ceeb0c546ab3d9cb09b809770c5c08973c494f85e1e386e3d96a780",
+    "install/uninstall.sh": "68ac72b6d93d6b4af802b54045261412580e1075aabb87027a17d85f27660f5c",
+    "install-tarball.sh": "a6873cfe2dd3608392db522299c86d2e87a42e51eaa28d5f8ff41a56297ff1dc",
+    "install-online.sh": "6d8831a8ae99b68408f99f4c0bcd3329bbd352413372c76e4ebdc274f4f789fc",
     "install/acca.sh": "8eaf8ee9cc6336071f1b62a77a166cc162a8be256fa8324bb87dd0ad501936f4",
     "install/acc.sh": "24f887fc26df13504e1384e7576eff3aa55444fedc0ce3f3f56823d0ab07e6f7",
     "install/batt-info.sh": "91cb30bc20f325557161709b8296bac12a700839d7c496e8d20f783da2814af1",

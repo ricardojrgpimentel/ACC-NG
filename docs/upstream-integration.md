@@ -107,3 +107,34 @@ cooldown. The original config was restored. The app's I3 record identifies the
 installed runtime and exact test scope, including an inherited staging cleanup
 bug still open in R5.3. Actual limits/reset, OEM policy and the full rollback
 matrix remain pending before distribution.
+
+
+## I4 — preserve installer staging during upgrade/recovery
+
+11 October 2026. Unreleased candidate **v1.0.7-ng (202610117)** over
+`1e8291b`. API 1/schema 202310160 and charging behaviour remain unchanged.
+
+R5.3 (partial): remove the inherited `/data/local/tmp/acc[-_]*` glob from
+`install/uninstall.sh`. The uninstaller removes installed module paths;
+installation sources and unrelated staging belong to their callers. Tarball
+and online installers still remove their extracted source after installation
+or recovery. No upstream commit is claimed as fully ported by this NG fix.
+
+Six regression tests execute nine scenarios using complete installer scripts
+with filesystem paths redirected below a temporary root. They cover hyphen,
+underscore and nested staging, clean installation, full uninstall, tarball
+cleanup, and injected copy failure (exit 42). Recovery restores the previous
+module/configuration, starts its fixture service once and preserves the
+original failure code before caller cleanup. Process/root/platform commands
+and the service are stubbed; these fixtures do not install a live module or
+exercise charging control. The pre-fix source fails all six regression tests.
+
+Installer source hashes now accompany the existing runtime hashes in shared
+frontend fixtures. R5.3 still needs explicit rollback CLI, broader cleanup and
+root-manager validation; R2.2/R2.3 and the full R7 matrix remain pending.
+
+
+Validation: 79 engine tests on host (77 passed, two Android-only skipped),
+79 passed with the Android fixture runners on Samsung SM-G975F, and all 35
+runtime/installer scripts passed Android shell syntax. Shared fixture export
+checks passed. These results do not certify live upgrade or explicit rollback.

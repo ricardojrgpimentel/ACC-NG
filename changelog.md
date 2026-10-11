@@ -1,3 +1,14 @@
+# v1.0.7-ng (local candidate, unreleased)
+
+- Preserve installation sources and unrelated files in /data/local/tmp during
+  upgrade, recovery and uninstall; remove inherited acc[-_]* staging cleanup.
+  Tarball/online callers continue to clean their own extracted source.
+- Exercise complete installation/cleanup and failed-copy recovery flows in
+  isolated host/Android filesystems; preserve the old module, configuration
+  and original failure status. Include installer hashes in bundle provenance.
+- Preserve API 1/schema 202310160 and existing charging behaviour. Full R5/R7
+  validation and publication remain pending.
+
 # v1.0.6-ng (local candidate, unreleased)
 
 - Discover current/voltage controls without chmod or waiting for a charger;
