@@ -1,4 +1,5 @@
 batt_info() {
+  local filter=${1:-.*}
 
   local voltagePath=${voltNow-}
   local i=
@@ -147,5 +148,5 @@ CONSUMED_WATTS=$CONSUMED_WATTS"
     fi
   done 2>/dev/null || :
 
-  } | sed '/^$/d; /^CAPACITY=$/d; /^TEMP=$/d' | grep -Ei "${1:-.*}" || :
+  } | sed '/^$/d; /^CAPACITY=$/d; /^TEMP=$/d' | grep -Ei "${filter//,/|}" || :
 }

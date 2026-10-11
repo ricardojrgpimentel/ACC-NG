@@ -5,15 +5,16 @@ ng_write_config() (
     exec 9>"$TMPDIR/.ng-config.lock" || return 1
     timeout 5 flock 0 <&9 || return 1
   fi
+  ng_config_new=$(mktemp "${config}.new.XXXXXX") || return 1
+  trap 'rm -f "$ng_config_new" "$ng_config_new.scripts" "$ng_config_new.values"' EXIT
+  trap 'exit 1' HUP INT TERM
   ng_config_shell=/system/bin/sh
   [ -x "$ng_config_shell" ] || ng_config_shell=bash
   if ! ${ng_config_locked:-false} && [ -s "$config" ]; then
     "$ng_config_shell" -n "$config" || return 1
-    . "$config" || return 1
+    grep -v '^:' "$config" > "$ng_config_new.values" || :
+    . "$ng_config_new.values" || return 1
   fi
-  ng_config_new=$(mktemp "${config}.new.XXXXXX") || return 1
-  trap 'rm -f "$ng_config_new" "$ng_config_new.scripts"' EXIT
-  trap 'exit 1' HUP INT TERM
   ng_config_old=$config
   ng_config_words() {
     local word= first=true

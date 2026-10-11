@@ -10,7 +10,7 @@ ng_engine_state() {
 }
 ng_print_engine_state() {
   local boot=$(cat /proc/sys/kernel/random/boot_id 2>/dev/null) saved= state=stopped
-  saved=$(sed -n 's/^bootId=//p' "$dataDir/engine-state" 2>/dev/null)
+  saved=$(sed -n 's/^bootId=//p' "$dataDir/engine-state" 2>/dev/null) || saved=
   [ "$saved" != "$boot" ] || state=$(sed -n 's/^engineState=//p' "$dataDir/engine-state" 2>/dev/null)
   [ ! -f "$execDir/disable" ] || state=disabled
   [ ! -f "$TMPDIR/.test-active" ] || state=testing

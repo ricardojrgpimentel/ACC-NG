@@ -67,15 +67,18 @@ at() {
   case "$requested" in [0-2][0-9]:[0-5][0-9]|[0-9]:[0-5][0-9]) :;; *) return 11;; esac
   [ "${requested#0}" = "${now#0}" ] || return 0
   key=$(printf '%s' "$requested $*" | cksum | cut -d ' ' -f 1)
-  mkdir -p "$TMPDIR/schedules"
-  exec 5>"$TMPDIR/schedules/.lock" || return 1
+  mkdir -p "$dataDir/schedules"
+  exec 5>"$dataDir/schedules/.lock" || return 1
   flock -n 0 <&5 || return 0
-  stamp=$TMPDIR/schedules/$key
+  stamp=$dataDir/schedules/$key
   if [ "$(cat "$stamp" 2>/dev/null)" = "$day" ]; then
     flock -u 0 <&5; exec 5>&-; return 0
   fi
   printf '%s\n' "$day" > "$stamp"
   flock -u 0 <&5; exec 5>&-
+  acc() { "$TMPDIR/acc" "$@"; }
+  acca() { "$TMPDIR/acca" "$@"; }
+  accd() { "$TMPDIR/accd" "$@"; }
   eval "$*"
 }
 
@@ -100,7 +103,7 @@ cycle_switches() {
 
     [ ! -f ${chargingSwitch[0]:-//} ] || {
 
-      flip_sw $1 || :
+      if ! flip_sw "$1"; then flip_sw on 2>/dev/null || :; continue; fi
 
       if [ "$1" = on ]; then
         not_charging || break
@@ -286,6 +289,12 @@ flip_sw() {
   set -- ${chargingSwitch[@]-}
   [ -f ${1:-//} ] || return 2
   swValue=
+  ( while [ "$#" -ge 3 ]; do
+      [ -f "$1" ] && parse_value "$2" >/dev/null && parse_value "$3" >/dev/null || exit 2
+      shift 3
+    done
+    [ "$#" = 0 ] || [ "$*" = -- ]
+  ) || return 2
 
   while [ -f ${1:-//} ]; do
 
@@ -339,7 +348,13 @@ misc_stuff() {
 
 
 notif() {
-  su -lp ${2:-2000} -c "/system/bin/cmd notification post -S bigtext -t '🔋ACC' 'Tag' \"${1:-:)}\"" < /dev/null > /dev/null 2>&1 || :
+  [ "${ngNotifications-true}" = true ] || return 0
+  local message="[$(date +%H:%M:%S)] ${1:-:)}" uid=${2:-2000} quoted=
+  case "$uid" in ''|*[!0-9]*) return 11;; esac
+  quoted=$(printf '%s' "$message" | awk '{gsub(/\047/, "\047\042\047\042\047"); printf "%s%s", (NR > 1 ? "\n" : ""), $0}')
+  (exec 4>&-; timeout 3 su -lp "$uid" -c "/system/bin/cmd notification post -S bigtext -t 'ACC-NG' 'acc-ng-cli' '$quoted'" \
+    </dev/null >/dev/null 2>&1 || :) &
+  return 0
 }
 
 

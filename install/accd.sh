@@ -167,12 +167,7 @@ if ! $init; then
       # set chgStatusCode and capacitySync
       if [ -z "$chgStatusCode" ] && cmd_batt reset \
         && chgStatusCode=$(dumpsys battery 2>/dev/null | sed -n 's/^  status: //p')
-      then
-        if [ ! -f $TMPDIR/.dexopt.done ] && _uptime 900; then
-          start-stop-daemon -bx $TMPDIR/.bg-dexopt-job.sh -S -- 2>/dev/null || :
-          touch $TMPDIR/.dexopt.done
-        fi
-      fi
+      then :; fi
 
       # read charging current ctrl files (part 2) once
       $chCurrRead || {
@@ -250,9 +245,10 @@ if ! $init; then
       sleep 1
       elapsed=$((elapsed + 1))
       src_cfg
-      ng_telemetry_valid || return 1
+      [ ! -f "$TMPDIR/.config-invalid" ] && ng_telemetry_valid || return 1
       [ "$(cat "$temp")" -lt "$((temperature[3] * 10))" ] || { shutdown; return 1; }
-      [ "$(cat "$temp")" -lt "$((temperature[1] * 10))" ] && _lt_pause_cap || return 1
+      if [ "$(cat "$temp")" -ge "$((temperature[1] * 10))" ]; then ng_pause_reason=temperature; return 1; fi
+      if ! _lt_pause_cap; then ng_pause_reason=limit; return 1; fi
       power=0; ng_power_state || power=$?
       [ "$power" != 1 ] || return 1
     done
@@ -276,6 +272,11 @@ if ! $init; then
     while :; do
 
       [ ! -f "$execDir/disable" ] || { ng_engine_state disabled; return 14; }
+      if [ -f "$TMPDIR/.config-invalid" ]; then
+        ng_engine_state config-invalid
+        flip_sw off || :
+        sleep ${loopDelay[1]}; src_cfg; continue
+      fi
       if ! ng_telemetry_valid; then
         ng_engine_state sensor-wait
         ng_pause_reason=sensor
@@ -362,8 +363,8 @@ if ! $init; then
             ! $cooldownCustom_ || cooldownRatio[0]=${cooldownCustom[2]:-${loopDelay[0]}}
             count=0
             while [ $count -lt ${cooldownRatio[0]:-${loopDelay[0]}} ]; do
-              sleep ${loopDelay[0]}
-              below_abs_lims && count=$(( count + ${loopDelay[0]} )) || break
+              ng_cooldown_wait 1 || break
+              below_abs_lims && count=$(( count + 1 )) || break
             done
           else
             (set_ch_curr ${cooldownCurrent:--} || :)
@@ -375,8 +376,8 @@ if ! $init; then
             ! $cooldownCustom_ || cooldownRatio[0]=${cooldownCustom[2]:-${loopDelay[0]}}
             count=0
             while [ $count -lt ${cooldownRatio[0]:-${loopDelay[0]}} ]; do
-              sleep ${loopDelay[0]}
-              below_abs_lims && count=$(( count + ${loopDelay[0]} )) || break
+              ng_cooldown_wait 1 || break
+              below_abs_lims && count=$(( count + 1 )) || break
             done
           fi
         done
@@ -729,10 +730,6 @@ else
 
   # preprocess battery interface
   . $execDir/batt-interface.sh
-
-  # prepare bg-dexopt-job wrapper
-  printf "#!/system/bin/sh\n/system/bin/cmd package bg-dexopt-job < /dev/null > /dev/null 2>&1" > $TMPDIR/.bg-dexopt-job.sh
-  chmod 0755 $TMPDIR/.bg-dexopt-job.sh
 
   # start $id daemon
   rm $TMPDIR/.ghost-charging 2>/dev/null

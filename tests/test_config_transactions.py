@@ -67,6 +67,13 @@ grep -E '^(capacity|ngNotifications|vendorFeature|: night)' "$config"
 test "$(grep -c '^: night=' "$config")" = 1
 ''', 'ngNotifications=true\ncapacity=(2 101 50 60 false false)\n: night=; echo new\nvendorFeature=enabled')
 
+    def test_named_script_addition_is_case_insensitive_and_preserves_quoting(self):
+        self.check('''echo ': Sleep Profile; echo old' >> "$config"
+ng_add_script ': "sleep profile"; printf "new # value"'
+grep '^:' "$config"
+test "$(grep -c '^:' "$config")" = 1
+''', ': "sleep profile"; printf "new # value"')
+
     def test_invalid_import_does_not_change_original(self):
         self.check('''cp "$config" before; echo 'capacity=(' > imported
 if ng_import_config imported; then exit 99; fi
@@ -81,6 +88,14 @@ ng_config_check "$config"
 grep -Fx 'capacity=(' "${config}.invalid"
 echo "$ngNotifications:${capacity[3]}"
 ''', 'capacity=(\ntrue:75')
+
+    def test_hook_failure_does_not_erase_valid_configuration(self):
+        self.check('''echo ': broken; false' >> "$config"
+cp "$config" before
+ng_load_config
+cmp before "$config"
+echo "$ngNotifications:${capacity[3]}"
+''', 'true:75')
 
     def test_schedule_once_per_day_including_midnight_and_quoting(self):
         self.check(function('misc-functions.sh', 'at') + '''

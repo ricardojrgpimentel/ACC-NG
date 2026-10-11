@@ -5,18 +5,30 @@ ng_config_check() {
   "$shell" -n "$1" 2>/dev/null
 }
 
+ng_source_config() {
+  local ng_had_errexit=false
+  case "$-" in *e*) ng_had_errexit=true;; esac
+  set +e
+  . "$1"
+  if $ng_had_errexit; then set -e; fi
+  return 0
+}
+
 ng_load_config() {
-  if ng_config_check "$config"; then . "$config"; return $?; fi
+  if ng_config_check "$config"; then
+    rm -f "$TMPDIR/.config-invalid"
+    ng_source_config "$config"; return 0
+  fi
   exec 5>"$TMPDIR/.ng-config.lock" || return 1
   timeout 5 flock 0 <&5 || return 1
   # Recheck after acquiring the mutex; another writer may already have repaired it.
   if ng_config_check "$config"; then
-    flock -u 0 <&5; exec 5>&-; . "$config"; return $?
+    flock -u 0 <&5; exec 5>&-; rm -f "$TMPDIR/.config-invalid"; ng_source_config "$config"; return 0
   fi
   cp -p "$config" "${config}.invalid" || return 1
   if [ -f "${config}.last-good" ] && ng_config_check "${config}.last-good"; then
     cp -p "${config}.last-good" "${config}.recover.$$" && mv "${config}.recover.$$" "$config" || return 1
-    . "$config"
+    ng_source_config "$config"
     rm -f "$TMPDIR/.config-invalid"
   else
     # Keep the invalid source for repair and use defaults in memory only.
@@ -30,8 +42,10 @@ ng_load_config() {
 ng_import_config() (
   local input=$1 normalized= candidate= name=
   [ -f "$input" ] || return 11
-  exec 5>"$TMPDIR/.ng-config.lock" || return 1
-  timeout 5 flock 0 <&5 || return 1
+  if ! ${ng_config_locked:-false}; then
+    exec 5>"$TMPDIR/.ng-config.lock" || return 1
+    timeout 5 flock 0 <&5 || return 1
+  fi
   normalized=$(mktemp "${config}.import.XXXXXX") || return 1
   candidate=$normalized.merged
   trap 'rm -f "$normalized" "$candidate"' EXIT
@@ -43,15 +57,26 @@ ng_import_config() (
   awk '
     function key(line) {
       if (line ~ /^[a-zA-Z_][a-zA-Z_0-9]*=/) { sub(/=.*/, "", line); return "v:" line }
-      if (line ~ /^:[ ;]*[a-zA-Z_][a-zA-Z_0-9]*=/) { sub(/^:[ ;]*/, "", line); sub(/=.*/, "", line); return "s:" line }
+      if (line ~ /^:/ && index(line,";")) {
+        sub(/^:[ \t]*/, "", line); sub(/;.*/, "", line); sub(/=$/, "", line)
+        gsub(/^[ \t]+|[ \t]+$/, "", line); gsub(/^\047|\047$|^\042|\042$/, "", line)
+        if (line!="") return "s:" tolower(line)
+      }
       return ""
     }
-    FNR==NR { k=key($0); if (k!="") { if (!(k in replacements)) order[++n]=k; replacements[k]=$0 }; next }
+    FNR==NR { k=key($0); if (k!="") { if (!(k in replacements)) order[++n]=k; replacements[k]=$0 } else if ($0 ~ /^:/) extra[++nx]=$0; next }
     { k=key($0); if (k!="" && k in replacements) { if (!(k in done)) print replacements[k]; done[k]=1 }
-      else print }
-    END { for(i=1;i<=n;i++) if(!(order[i] in done)) print replacements[order[i]] }
+      else print; seen[$0]=1 }
+    END { for(i=1;i<=n;i++) if(!(order[i] in done)) print replacements[order[i]]; for(i=1;i<=nx;i++) if(!(extra[i] in seen)) print extra[i] }
   ' "$normalized" "$config" > "$candidate" || return 1
   ng_config_check "$candidate" || return 11
   cp -p "$config" "${config}.last-good.new" && mv "${config}.last-good.new" "${config}.last-good" || return 1
   chmod 0600 "$candidate" && mv "$candidate" "$config"
+)
+
+ng_add_script() (
+  local imported=$(mktemp "$TMPDIR/.ng-script.XXXXXX") || return 1
+  trap 'rm -f "$imported"' EXIT
+  printf '%s\n' "$*" > "$imported"
+  ng_import_config "$imported"
 )

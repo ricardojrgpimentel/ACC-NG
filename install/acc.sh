@@ -99,7 +99,11 @@ edit() {
   local file="$1"
   shift
   case "${1-}" in
-    a) echo >> $file; shift; echo "$@" >> $file;;
+    a) shift
+       if [ "$file" = "$config" ]; then
+         . "$execDir/config-transaction.sh"
+         ng_add_script "$@"
+       else printf '\n%s\n' "$*" >> "$file"; fi;;
     d) sed -Ei "\#$2#d" $file;;
 
     g) [ "$file" = "$config" ] || {
@@ -295,6 +299,15 @@ case "${1-}" in
     ng_import_config "${2-}"
   ;;
 
+  -bv)
+    # Latest valid NG backup version, with no state changes.
+    for backup in $(ls -1dt "$dataDir"/backup/* 2>/dev/null); do
+      [ -f "$backup/module/module.prop" ] || continue
+      sed -n 's/^version=//p; s/^versionCode=//p' "$backup/module/module.prop"
+      break
+    done
+  ;;
+
   -b|--rollback)
     rollback "${2-}"
   ;;
@@ -407,7 +420,7 @@ case "${1-}" in
 
   -n|--notif)
     shift
-    notif "${@-}"
+    notif "$*"
   ;;
 
   -p|--parse)
@@ -453,6 +466,10 @@ case "${1-}" in
     set_prop_ --charging_switch
   ;;
 
+  -ss::)
+    set_prop_ s::
+  ;;
+
   -ss:)
     set_prop_ --charging_switch:
   ;;
@@ -479,8 +496,12 @@ case "${1-}" in
   ;;
 
 
-  -T|--logtail|-L) #legacy, AccA
-    tail -F $TMPDIR/accd-*.log
+  -T|--logtail|-L|-T:*) #legacy, AccA
+    case "$1" in -T:*)
+      filter=${1#-T:}; filter=${filter//,/|}
+      tail -F "$TMPDIR"/accd-*.log | awk -v pattern="$filter" 'tolower($0) ~ tolower(pattern) { print; fflush() }';;
+      *) tail -F "$TMPDIR"/accd-*.log;;
+    esac
   ;;
 
   -u|--upgrade)

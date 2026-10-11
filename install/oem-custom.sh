@@ -3,7 +3,8 @@ _set_prop() { sed -i "\|^${1}=|s|=.*|=$2|" ${3:-$config}; }
 _get_prop() { sed -n "\|^$1=|s|.*=||p" ${2:-$config} 2>/dev/null || :; }
 
 # patch/reset [broken/obsolete] config
-if (set +x; . $config) > /dev/null 2>&1; then
+. "$execDir/config-transaction.sh"
+if ng_config_check "$config"; then
   configVer=0$(_get_prop configVerCode)
   defaultConfVer=0$(cat $TMPDIR/.config-ver)
   [ $configVer -eq $defaultConfVer ] || {

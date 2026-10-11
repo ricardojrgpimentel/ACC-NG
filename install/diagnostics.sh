@@ -20,9 +20,11 @@ ng_export_logs() (
   ng_print_engine_state > "$work/engine-state.txt"
   ng_print_sensor_status > "$work/sensors.txt" 2>&1 || :
   ng_print_power_limits > "$work/limits.txt" 2>&1 || :
+  timeout 3 dmesg 2>&1 | tail -c 131072 > "$work/kernel.txt" || :
+  timeout 3 logcat -d -t 400 2>&1 | tail -c 131072 > "$work/logcat.txt" || :
   timeout 5 dumpsys battery > "$work/dumpsys-battery.txt" 2>&1 || :
   (cd "$work" && timeout 8 tar -czf "$output.new" .) || return 1
   mv "$output.new" "$output" || return 1
   cp "$output" /sdcard/Download/ 2>/dev/null || :
-  printf '%s\n' "$output"
+  echo "$output"
 )

@@ -209,8 +209,16 @@ keeps OEM current/voltage and thermal limits, and returns to the regular daemon
 on confirmed unplug. New optional idle_apps, Encore and percentage-current UI
 remain outside this candidate, as permitted by R6's optional gate.
 
-Host: 120 behavioral cases passed (two Android-only cases skipped). The shared
+Host: 123 behavioral cases passed (two Android-only cases skipped). The shared
 source contract covers the added runtime helpers and both installers. Android,
 app and physical candidate evidence is maintained in AccA-NG's
 `docs/acc-ng-validation.md`; this source record does not certify unavailable
 OEM devices/root managers or unsupported limit nodes.
+
+Final compatibility audit also covers CLI `-s file` partial imports, `-c a`
+case-insensitive named scripts (including names containing spaces), NG command
+wrappers in schedules, comma-separated information/log filters, backup-version
+readback and working-switch/support reports. Configuration validation does not
+execute scripts; writer reload excludes script lines. A failing user hook does
+not erase an otherwise valid profile. Unrelated dexopt jobs were removed from
+the charging loop. Kernel/logcat capture is bounded in diagnostic exports.

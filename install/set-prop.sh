@@ -19,6 +19,12 @@ set_prop() {
     src_cfg;;
   esac
 
+  if [ -f "${1:-/nonexistent}" ]; then
+    . "$execDir/config-transaction.sh"
+    ng_import_config "$1"
+    return $?
+  fi
+
   case ${1-} in
 
     # set multiple properties
@@ -82,6 +88,12 @@ set_prop() {
     ;;
 
     # print switches
+    s::)
+      sed 's/ --$//' "$TMPDIR/working-switches" 2>/dev/null || :
+      ng_print_power_limits
+      return 0
+    ;;
+
     s:|--charging*witch:)
       cat $TMPDIR/ch-switches
       return 0
@@ -129,6 +141,10 @@ set_prop() {
   then
     ! daemon_ctrl stop || restartDaemon=true
   fi > /dev/null
+
+  if [ -n "${prioritize_batt_idle_mode-${pbim-}}" ]; then
+    case "${chargingSwitch[*]-}" in *\ --) :;; *) s=;; esac
+  fi
 
   # update config.txt
   . $execDir/write-config.sh
