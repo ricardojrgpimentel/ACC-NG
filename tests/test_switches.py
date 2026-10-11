@@ -200,6 +200,32 @@ ng_pause_reason=temperature; _le_resume_cap; echo THERMAL_ONLY
 '''
         self.assertEqual({'code': 0, 'output': 'THERMAL_ONLY'}, run(script))
 
+    def test_boot_pause_applies_known_control_before_net_charging_is_observed(self):
+        script = daemon_function('ctrl_charging') + '''
+execDir=$PWD; offMid=true; chargingSwitch=(battery/enable 1 0)
+echo 300 > temperature; temp=$PWD/temperature; temperature=(35 50 45 55)
+loopDelay=(1 1); touch .minCapMax
+ng_telemetry_valid() { return 0; }; ng_engine_state() { :; }
+_ge_pause_cap() { return 1; }; _lt_pause_cap() { return 0; }; _gt_resume_cap() { return 0; }
+is_charging() { echo SHOULD_NOT_WAIT_FOR_CHARGING; return 1; }
+ng_disable_safe() { echo PAUSED; }; force_off() { :; }
+sleep() { echo "REASON:$ng_pause_reason"; exit 0; }
+ctrl_charging
+'''
+        self.assertEqual({'code': 0, 'output': 'PAUSED\nREASON:reboot'}, run(script))
+
+    def test_boot_pause_survives_discharge_until_automatic_switch_is_selected(self):
+        script = daemon_function('ctrl_charging') + '''
+execDir=$PWD; offMid=true; chargingSwitch=(); loopDelay=(1 1)
+touch .minCapMax; samples=0
+ng_telemetry_valid() { samples=$((samples + 1)); [ "$samples" = 1 ] || { test -f .minCapMax; echo RETAINED; exit 0; }; }
+ng_engine_state() { :; }; ng_observe() { :; }
+_ge_pause_cap() { return 1; }; _lt_pause_cap() { return 0; }; _gt_resume_cap() { return 0; }
+is_charging() { return 1; }; _le_resume_cap() { return 1; }; _uptime() { return 1; }; sleep() { :; }
+ctrl_charging
+'''
+        self.assertEqual({'code': 0, 'output': 'RETAINED'}, run(script))
+
     def test_cooldown_pause_observes_shutdown_and_unplug_within_one_second(self):
         for power, temp, expected in [(1, 300, '1'), (0, 550, 'SHUTDOWN\n1'), (0, 510, '1')]:
             script = daemon_function('ng_cooldown_wait') + f'''

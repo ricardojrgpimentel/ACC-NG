@@ -9,6 +9,7 @@
 - Keep thermal/capacity pause reasons separate and interrupt cooldown promptly.
 - Save configuration atomically, retain recoverable backups and extension keys,
   import partial CRLF profiles/scripts and avoid duplicate daily schedules.
+- Apply configured offMid boot pauses even while boot load causes net discharge.
 - Expose boot readiness, honor disable during initialization, record root manager
   flags and support APatch's BusyBox path.
 - Validate HTTPS downloads and NG archives, isolate extraction cleanup, restore

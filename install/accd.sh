@@ -294,18 +294,20 @@ if ! $init; then
       rm -f "$TMPDIR/.sensor-fault"
       _ge_pause_cap || ng_idle_retries=0
 
+      # Boot load can make net battery current negative even with input ON.
+      # A configured pause does not depend on first observing net charging.
+      if $offMid && [ -f "$TMPDIR/.minCapMax" ] && _lt_pause_cap && _gt_resume_cap \
+        && [ -n "${chargingSwitch[0]-}" ] && [ "$(cat "$temp")" -lt "$(( ${temperature[3]} * 10 ))" ]; then
+        ng_pause_reason=reboot
+        ng_disable_safe || return 7
+        force_off
+        sleep ${loopDelay[1]}
+        rm "$TMPDIR/.minCapMax" 2>/dev/null || :
+        continue
+      fi
+
       if is_charging; then
         ng_observe Charging || :
-
-        # disable charging after a reboot, if min < capacity < max
-        if $offMid && [ -f $TMPDIR/.minCapMax ] && _lt_pause_cap && _gt_resume_cap; then
-          ng_pause_reason=reboot
-          ng_disable_safe || return 7
-          force_off
-          sleep ${loopDelay[1]}
-          rm $TMPDIR/.minCapMax 2>/dev/null || :
-          continue
-        fi
 
         # disable charging under <conditions>
         if [ $(cat $temp) -ge $(( ${temperature[1]} * 10 )) ] || _ge_pause_cap; then
@@ -419,7 +421,11 @@ if ! $init; then
         fi
         sleep ${loopDelay[1]}
       fi
-      rm $TMPDIR/.minCapMax 2>/dev/null || :
+      # Keep an unresolved boot pause until a switch is selected or the level
+      # leaves the interval; observing discharge during boot is not resolution.
+      if ! $offMid || ! _lt_pause_cap || ! _gt_resume_cap; then
+        rm "$TMPDIR/.minCapMax" 2>/dev/null || :
+      fi
     done
   }
 

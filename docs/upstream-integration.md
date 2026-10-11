@@ -209,7 +209,7 @@ keeps OEM current/voltage and thermal limits, and returns to the regular daemon
 on confirmed unplug. New optional idle_apps, Encore and percentage-current UI
 remain outside this candidate, as permitted by R6's optional gate.
 
-Host: 131 behavioral cases (129 passed, two Android-only cases skipped). The shared
+Host: 133 behavioral cases (131 passed, two Android-only cases skipped). The shared
 source contract covers the added runtime helpers and both installers. Android,
 app and physical candidate evidence is maintained in AccA-NG's
 `docs/acc-ng-validation.md`; this source record does not certify unavailable
@@ -239,3 +239,9 @@ before being reported as idle.
 The final CLI audit puts full config reset and script deletion under the same
 atomic replacement/backup mutex; reset closes the writer lock before starting
 a daemon so that the restarted process cannot inherit and retain it.
+
+A physical locked-boot trial found that net discharge during boot could clear
+the offMid request before applying the configured switch. The controller now
+applies a known boot pause before requiring net charging, keeps an unresolved
+request until automatic selection or leaving the interval, and retains the
+shutdown-temperature guard. Behavioral fixtures cover both paths.
