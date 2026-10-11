@@ -713,12 +713,14 @@ else
 
 
   # Recover a killed probe's journal before any normal charging writes.
-  if [ -s "$TMPDIR/.test-snapshot" ]; then
+  if [ -s "$TMPDIR/.test-snapshot" ] || [ -s "$TMPDIR/.test-master-snapshot" ]; then
     . "$execDir/limit-control.sh"
     . "$execDir/switch-test.sh"
-    ng_test_snapshot=$TMPDIR/.test-snapshot
-    ng_test_restore || { ng_engine_state control-failure; exit 7; }
-    rm -f "$TMPDIR/.test-snapshot" "$TMPDIR/.test-active" "$TMPDIR/.test-daemon-was-running"
+    for ng_test_snapshot in "$TMPDIR/.test-snapshot" "$TMPDIR/.test-master-snapshot"; do
+      ng_test_restore || { ng_engine_state control-failure; exit 7; }
+    done
+    if [ -s "$TMPDIR/.test-original-power" ]; then cp "$TMPDIR/.test-original-power" "$TMPDIR/.ng-input-paused"; fi
+    rm -f "$TMPDIR/.test-snapshot" "$TMPDIR/.test-master-snapshot" "$TMPDIR/.test-original-power" "$TMPDIR/.test-active" "$TMPDIR/.test-daemon-was-running"
   fi
 
   # prepare default config help text and version code for oem-custom.sh and write-config.sh

@@ -14,6 +14,19 @@ ng_power_state() {
     value=$(cat "$file" 2>/dev/null) || { unknown=true; continue; }
     case "$value" in 1) return 0;; 0) seen=true;; *) unknown=true;; esac
   done
-  $seen && ! $unknown && return 1
+  if $seen && ! $unknown; then
+    # Some OEM switches cut the supply's online bit together with input power.
+    # Readback of our own OFF write makes physical unplug unprovable.
+    local marker=${TMPDIR:-/dev/.vr25/acc}/.ng-input-paused entry= path= off=
+    if [ -s "$marker" ]; then
+      entry=$(cat "$marker" 2>/dev/null) || return 2
+      path=${entry%%::*}; off=${entry#*::}
+      case "$path" in ''|*[!a-zA-Z0-9_./:-]*) return 2;; esac
+      case "$path" in /*) :;; *) path=${1:-.}/$path;; esac
+      value=$(cat "$path" 2>/dev/null) || return 2
+      [ "$value" != "$off" ] || return 2
+    fi
+    return 1
+  fi
   return 2
 }

@@ -284,7 +284,7 @@ flip_sw() {
   flip=$1
   local on=
   local off=
-  local oppositeValue=
+  local oppositeValue= pausedNode= pausedOff=
 
   set -- ${chargingSwitch[@]-}
   [ -f ${1:-//} ] || return 2
@@ -306,13 +306,23 @@ flip_sw() {
       off="$(parse_value "$3")" || return 1
     fi
 
+    if [ "$on" != "$off" ] && [ -z "$pausedNode" ]; then pausedNode=$1; pausedOff=$off; fi
     [ $flip = on ] && oppositeValue="$off" || { oppositeValue="$on"; cat $currFile > $curThen; }
     write \$$flip $1 || return 1
+    # Keep provenance even if a later alias in the group refuses its write.
+    if [ "$flip" = off ] && [ "$1" = "$pausedNode" ]; then
+      printf '%s::%s\n' "$pausedNode" "$pausedOff" > "$TMPDIR/.ng-input-paused.new" &&
+        mv "$TMPDIR/.ng-input-paused.new" "$TMPDIR/.ng-input-paused" || return 1
+    fi
 
     [ $# -lt 3 ] || shift 3
     [ $# -ge 3 ] || break
 
   done
+  if [ "$flip" = off ] && [ -n "$pausedNode" ]; then
+    printf '%s::%s\n' "$pausedNode" "$pausedOff" > "$TMPDIR/.ng-input-paused.new" &&
+      mv "$TMPDIR/.ng-input-paused.new" "$TMPDIR/.ng-input-paused"
+  elif [ "$flip" = on ]; then rm -f "$TMPDIR/.ng-input-paused"; fi
 }
 
 

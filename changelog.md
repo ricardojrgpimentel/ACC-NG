@@ -2,6 +2,8 @@
 
 - Discover split OEM sensors without fabricated readings; report current source
   and distinguish battery current from input current.
+- Keep OEM input-cut readings unknown while our own pause is active; prove
+  external power before probes and restore the original paused control.
 - Bound switch tests, restore controls after cancellation, preserve manual
   policy and learn discharge polarity without blocking the charging loop.
 - Keep thermal/capacity pause reasons separate and interrupt cooldown promptly.

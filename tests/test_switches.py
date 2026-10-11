@@ -99,6 +99,50 @@ echo "${code:-0}:$(cat battery/enable)"
 echo "${code:-0}:$(cat battery/enable)"
 '''))
 
+    def test_configured_pause_can_verify_power_without_losing_original_off_value(self):
+        self.assertEqual({'code': 0, 'output': 'Ok\n0:0'}, self.probe('''offStatus=Discharging
+echo 0 > battery/enable
+chargingSwitch=(battery/enable 1 0 --)
+ng_power_state() { [ "$(cat battery/enable)" = 1 ]; }
+(ng_test_command q battery/enable 1 0) || code=$?
+echo "${code:-0}:$(cat battery/enable)"
+'''))
+
+    def test_own_input_cut_is_unknown_until_control_is_restored(self):
+        script = source('external-power.sh') + '''
+mkdir battery usb; echo 0 > usb/online; echo 1 > battery/pause
+echo 'battery/pause::1' > .ng-input-paused
+ng_power_state || code=$?; echo "$code"
+echo 0 > battery/pause
+ng_power_state || code=$?; echo "$code"
+echo 1 > usb/online
+ng_power_state; echo CONNECTED
+'''
+        self.assertEqual({'code': 0, 'output': '2\n1\nCONNECTED'}, run(script))
+
+    def test_own_input_marker_resolves_relative_nodes_against_supply_root(self):
+        script = source('external-power.sh') + '''
+mkdir -p supplies/battery supplies/usb elsewhere
+echo 0 > supplies/usb/online; echo 1 > supplies/battery/pause
+echo 'battery/pause::1' > .ng-input-paused
+supplyRoot=$PWD/supplies
+cd elsewhere
+ng_power_state "$supplyRoot" || code=$?; echo "$code"
+'''
+        self.assertEqual({'code': 0, 'output': '2'}, run(script))
+
+    def test_cancel_restores_original_paused_input_after_baseline_enable(self):
+        self.assertEqual({'code': 0, 'output': 'Fail\n16:0\nbattery/enable::0'}, self.probe('''offStatus=Discharging
+echo 0 > battery/enable
+chargingSwitch=(battery/enable 1 0 --)
+ng_power_state() { [ "$(cat battery/enable)" = 1 ]; }
+sleep() { touch .test-cancel; }
+(ng_test_command q battery/enable 1 0) || code=$?
+echo "${code:-0}:$(cat battery/enable)"
+cat .ng-input-paused
+test ! -e .test-master-snapshot
+'''))
+
     def test_missing_reference_is_an_error_without_permission_change(self):
         self.assertEqual({'code': 0, 'output': 'Fail\n10:1'}, self.probe('''offStatus=Idle
 chmod() { exit 99; }

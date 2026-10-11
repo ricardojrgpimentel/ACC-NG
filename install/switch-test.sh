@@ -32,13 +32,10 @@ ng_test_sample() {
   return 10
 }
 
-ng_test_switch() {
-  local file= original= value= canonical= seen= code=0 idleMode=false
+ng_test_snapshot_group() {
+  local file= original= value= canonical= seen=
   [ "$#" -le 25 ] || return 10
-  chargingSwitch=("$@")
-  printf '\n%s\n' "${chargingSwitch[*]}"
   : > "$ng_test_snapshot" || return 7
-  set -- "${chargingSwitch[@]}"
   # Snapshot the whole group before touching any driver-coupled aliases.
   while [ "$#" -ge 3 ]; do
     file=$1
@@ -56,6 +53,14 @@ ng_test_switch() {
     shift 3
   done
   [ "$#" = 0 ] || [ "$*" = -- ] || return 10
+  return 0
+}
+
+ng_test_switch() {
+  local code=0 idleMode=false
+  chargingSwitch=("$@")
+  printf '\n%s\n' "${chargingSwitch[*]}"
+  ng_test_snapshot_group "$@" || return $?
   ng_test_budget || return 16
   flip_sw off || code=7
   if [ "$code" = 0 ]; then ng_test_sample off || code=$?; fi
@@ -75,21 +80,60 @@ ng_test_switch() {
   return "$code"
 }
 
+ng_test_external_ready() {
+  local power=0 found=false attempt=0
+  ng_power_state && return 0 || power=$?
+  [ -n "${chargingSwitch[0]-}" ] && [ "${#chargingSwitch[@]}" -ge 3 ] || { [ "$power" = 1 ] && return 2 || return 16; }
+  ng_test_snapshot_group "${chargingSwitch[@]}" || return 16
+  cp "$ng_test_snapshot" "$ng_test_master" || return 7
+  # Persist the original selected OFF state before enabling the input path.
+  : > "$ng_test_power_marker"
+  local file= on= off= original=
+  set -- "${chargingSwitch[@]}"
+  while [ "$#" -ge 3 ]; do
+    file=$1; on=$(parse_value "$2"); off=$(parse_value "$3"); original=$(cat "$file")
+    if [ "$on" != "$off" ] && [ "$original" = "$off" ]; then
+      printf '%s::%s\n' "$file" "$off" > "$ng_test_power_marker"; break
+    fi
+    shift 3
+  done
+  flip_sw on || { ng_test_restore; return 7; }
+  while [ "$attempt" -lt 4 ]; do
+    ng_test_budget && ng_telemetry_valid || break
+    [ "$(cat "$temp")" -lt "$(( ${temperature[1]} * 10 ))" ] || break
+    if ng_power_state; then found=true; break; fi
+    sleep 1; attempt=$((attempt + 1))
+  done
+  : > "$ng_test_snapshot"
+  $found && return 0
+  [ "$power" = 1 ] && return 2 || return 16
+}
+
 ng_test_command() {
   set +e
   ng_test_deadline=$(( $(ng_test_time) + 45 ))
   ng_test_snapshot=$TMPDIR/.test-snapshot
+  ng_test_master=$TMPDIR/.test-master-snapshot
+  ng_test_power_marker=$TMPDIR/.test-original-power
   ng_test_restart=false
   ng_test_code=16
   exec 8>"$TMPDIR/.ng-test.lock" || exit 16
   flock -n 0 <&8 || { echo 'Switch test busy'; exit 16; }
-  if [ -s "$ng_test_snapshot" ]; then ng_test_restore || exit 7; fi
   [ ! -f "$TMPDIR/.test-daemon-was-running" ] || ng_test_restart=true
   rm -f "$TMPDIR/.test-cancel"
   ng_test_finish() {
     trap - EXIT HUP INT TERM
     if ng_test_restore; then rm -f "$ng_test_snapshot";
     else ng_test_code=7; cp "$ng_test_snapshot" "$dataDir/logs/switch-restore-pending"; fi
+    if [ -s "$ng_test_master" ]; then
+      ng_test_snapshot=$ng_test_master
+      if ng_test_restore; then
+        rm -f "$ng_test_master"
+      else ng_test_code=7; fi
+      if [ -s "$ng_test_power_marker" ]; then cp "$ng_test_power_marker" "$TMPDIR/.ng-input-paused";
+      else rm -f "$TMPDIR/.ng-input-paused"; fi
+      [ -s "$ng_test_master" ] || rm -f "$ng_test_power_marker"
+    fi
     rm -f "$TMPDIR/.test-active" "$TMPDIR/.test-daemon-was-running" "$TMPDIR/.sw"
     printf 'result=%s\n' "$ng_test_code" >> "$dataDir/logs/last-switch-test.log"
     if [ -n "${ng_test_daemon_locked-}" ]; then flock -u 0 <&4; exec 4>&-; fi
@@ -103,7 +147,6 @@ ng_test_command() {
   trap 'ng_test_code=16; exit 16' HUP INT TERM
   mkdir -p "$dataDir/logs"
   : > "$dataDir/logs/last-switch-test.log"
-  : > "$ng_test_snapshot"
   echo "$$" > "$TMPDIR/.test-active"
   if "$TMPDIR/acca" -D >/dev/null 2>&1; then
     ng_test_restart=true
@@ -113,9 +156,18 @@ ng_test_command() {
   exec 4>"$TMPDIR/acc.lock" || exit 16
   flock -n 0 <&4 || exit 16
   ng_test_daemon_locked=true
-  ng_power_state || { ng_test_code=2; exit 2; }
+  if [ -s "$ng_test_snapshot" ]; then ng_test_restore || { ng_test_code=7; exit 7; }; fi
+  if [ -s "$ng_test_master" ]; then
+    ng_test_snapshot=$ng_test_master
+    ng_test_restore || { ng_test_code=7; exit 7; }
+    if [ -s "$ng_test_power_marker" ]; then cp "$ng_test_power_marker" "$TMPDIR/.ng-input-paused"; fi
+    rm -f "$ng_test_master" "$ng_test_power_marker"
+    ng_test_snapshot=$TMPDIR/.test-snapshot
+  fi
+  : > "$ng_test_snapshot"
   ng_telemetry_valid || exit 16
   [ "$(cat "$temp")" -lt "$(( ${temperature[1]} * 10 ))" ] || exit 16
+  ng_test_external_ready || { ng_test_code=$?; exit "$ng_test_code"; }
   [ "${1-}" != -- ] || shift
   local quiet=false entry= result=10 any=10
   if [ "${1-}" = q ]; then quiet=true; shift; fi

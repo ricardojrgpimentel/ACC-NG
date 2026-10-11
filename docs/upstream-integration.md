@@ -209,7 +209,7 @@ keeps OEM current/voltage and thermal limits, and returns to the regular daemon
 on confirmed unplug. New optional idle_apps, Encore and percentage-current UI
 remain outside this candidate, as permitted by R6's optional gate.
 
-Host: 123 behavioral cases passed (two Android-only cases skipped). The shared
+Host: 127 behavioral cases (125 passed, two Android-only cases skipped). The shared
 source contract covers the added runtime helpers and both installers. Android,
 app and physical candidate evidence is maintained in AccA-NG's
 `docs/acc-ng-validation.md`; this source record does not certify unavailable
@@ -222,3 +222,16 @@ readback and working-switch/support reports. Configuration validation does not
 execute scripts; writer reload excludes script lines. A failing user hook does
 not erase an otherwise valid profile. Unrelated dexopt jobs were removed from
 the charging loop. Kernel/logcat capture is bounded in diagnostic exports.
+
+### I6 Samsung input-pause correction
+
+The Samsung `batt_slate_mode` OFF value also clears the external supply's
+`online` bit while the cable remains attached. A readback marker for our own
+OFF write now keeps that state unknown instead of asserting unplug. This
+prevents false unplug/calibration events. A switch probe snapshots and briefly
+enables the configured input control to prove external power, under the same
+thermal checks and overall deadline. A separate durable journal restores the
+original paused input after all probes, cancellation or daemon recovery.
+The shared frontend helper resolves relative control paths against its supply
+root. Native Not Charging readings still require battery-current confirmation
+before being reported as idle.

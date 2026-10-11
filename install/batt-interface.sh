@@ -113,7 +113,7 @@ status() {
       _status=$(set -eu; eval '$battStatusOverride') || :
     fi
   elif $battStatusWorkaround; then
-    [ $_status = Idle ] || idle_discharging || :
+    idle_discharging || :
   fi
 
   [ -z "${exitCode_-}" ] || echo -e "  switch: ${switch:--} (${swValue:-N/A})\tcurrent: $(calc $curNow \* 1000 / ${ampFactor:-$ampFactor_} | xargs printf %.f)mA ($_status)"
