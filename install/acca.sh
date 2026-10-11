@@ -74,6 +74,13 @@ esac
 
 case "$@" in
 
+  --sensor-status)
+    src_cfg
+    . "$execDir/batt-interface.sh"
+    ng_print_sensor_status
+    exit 0
+  ;;
+
   --power-status)
     # Read coherently; a busy writer is unavailable, not physical success.
     exec 6>"$TMPDIR/.ng-config.lock" || exit 1

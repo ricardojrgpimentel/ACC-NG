@@ -33,6 +33,7 @@ print_curr_set() { :; }; print_curr_restored() { :; }
             misc = misc.replace('. \"$execDir/control-write.sh\"', (ROOT / 'install/control-write.sh').read_text())
             batt = (ROOT / 'install/batt-interface.sh').read_text().split('if ${init:-false}; then')[0]
             batt = batt.replace('. "$execDir/external-power.sh"', (ROOT / 'install/external-power.sh').read_text())
+            batt = batt.replace('. "$execDir/sensor-discovery.sh"', (ROOT / 'install/sensor-discovery.sh').read_text())
             for name in ['ctrl-files.sh', 'write-config.sh']:
                 script += 'printf %s ' + shlex.quote((ROOT / 'install' / name).read_text()) + ' > ' + name + '\n'
             script += misc + batt + '\nnot_charging() { return 1; }\n'

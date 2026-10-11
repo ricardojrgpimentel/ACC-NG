@@ -11,7 +11,7 @@ class FrontendControlsTests(unittest.TestCase):
     def frontend(self):
         script = ''
         for name in ['limit-control.sh', 'control-write.sh', 'control-discovery.sh',
-                     'ng-power-limits.sh', 'external-power.sh', 'set-ch-curr.sh',
+                     'ng-power-limits.sh', 'external-power.sh', 'sensor-discovery.sh', 'set-ch-curr.sh',
                      'set-ch-volt.sh', 'batt-interface.sh', 'default-config.txt']:
             script += 'printf %s ' + shlex.quote(source(name)) + f' > {name}\n'
         text = source('acca.sh')

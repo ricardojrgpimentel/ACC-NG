@@ -80,7 +80,7 @@ if ! $init; then
 
 
   below_abs_lims() {
-    _lt_pause_cap && [ $(cat $temp) -lt $(( ${temperature[1]} * 10 )) ] && is_charging
+    ng_telemetry_valid && _lt_pause_cap && [ $(cat $temp) -lt $(( ${temperature[1]} * 10 )) ] && is_charging
   }
 
 
@@ -243,6 +243,20 @@ if ! $init; then
 
     while :; do
 
+      if ! ng_telemetry_valid; then
+        ng_pause_reason=sensor
+        # Do not test/cycle unknown controls with missing protective telemetry.
+        flip_sw off || :
+        if [ ! -f "$TMPDIR/.sensor-fault" ]; then
+          touch "$TMPDIR/.sensor-fault"
+          notif "Charging protection paused: battery capacity, temperature or voltage sensor unavailable."
+        fi
+        sleep ${loopDelay[1]}
+        src_cfg
+        continue
+      fi
+      rm -f "$TMPDIR/.sensor-fault"
+
       if is_charging; then
         ng_observe Charging || :
 
@@ -387,7 +401,7 @@ if ! $init; then
 
   set_dp() {
     src_cfg
-    while [ -z "${dischargePolarity-}" ] && [ $currFile != $TMPDIR/.dummy-curr ] && $battStatusWorkaround; do
+    while [ -z "${dischargePolarity-}" ] && [ $currFile != $TMPDIR/.dummy-curr ] && ${currentIsBattery:-true} && [ ! -f "$TMPDIR/.current-status-disabled" ] && $battStatusWorkaround; do
       (if online; then
         notif "discharge_polarity is not set. Unplug and wait, or set it manually."
         (while [ -z "${dischargePolarity-}" ] && online; do

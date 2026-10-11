@@ -108,7 +108,7 @@ capacity=(2 101 50 60 false false)
         fields = dict(line.split('=', 1) for line in self.actual['module'].splitlines())
         self.assertEqual('1', fields['ngApiVersion'])
         self.assertEqual('202310160', fields['ngConfigSchema'])
-        self.assertEqual(7, len(fields['ngCapabilities'].split(',')))
+        self.assertEqual(8, len(fields['ngCapabilities'].split(',')))
         self.assertNotIn('idle-apps', fields['ngCapabilities'])
 
     def test_shell_status_handles_polarity_and_current_units(self):

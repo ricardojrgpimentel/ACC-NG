@@ -99,7 +99,7 @@ def collect():
                      'install/default-config.txt', 'install/write-config.sh', 'install/set-prop.sh',
                      'install/external-power.sh', 'install/control-discovery.sh', 'install/ng-power-limits.sh',
                      'install/limit-control.sh', 'install/control-write.sh', 'install/set-ch-curr.sh',
-                     'install/set-ch-volt.sh', 'install/accd.sh', 'install/ng-events.sh', 'install/misc-functions.sh']}
+                     'install/set-ch-volt.sh', 'install/accd.sh', 'install/ng-events.sh', 'install/misc-functions.sh', 'install/sensor-discovery.sh', 'install/ctrl-files.sh', 'install/oem-custom.sh']}
     fixtures['config']['default'] = config_case()
     fixtures['config']['profile'] = config_case('''
 ngNotifications=false; ngNotificationLanguage=pt-PT

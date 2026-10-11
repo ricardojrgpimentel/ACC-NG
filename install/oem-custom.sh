@@ -38,22 +38,29 @@ fi
 # idle mode - sony xperia
 echo 1 > battery_ext/smart_charging_activation 2>/dev/null || :
 
-# block "ghost charging on steroids" (Xiaomi Redmi 3 - ido)
-[ ! -f $TMPDIR/accd-ido.log ] || touch $TMPDIR/.ghost-charging
-
-# mt6795, exclude ChargerEnable switches (troublesome)
-! getprop | grep -E mt6795 > /dev/null || {
-  ! _grep ChargerEnable $execDir/ctrl-files.sh || {
-    sed -i /ChargerEnable/d $TMPDIR/ch-switches
-    sed -i /ChargerEnable/d $execDir/ctrl-files.sh
-  }
+ng_oem_defaults() {
+  local board=$(getprop ro.product.board 2>/dev/null | tr '[:upper:]' '[:lower:]')
+  rm -f "$TMPDIR/.current-status-disabled"
+  case "$board" in
+    mt6795) sed -i /ChargerEnable/d "$TMPDIR/ch-switches";;
+    msm8916) touch "$TMPDIR/.ghost-charging";;
+    msm8937|cro-l03) touch "$TMPDIR/.current-status-disabled";;
+  esac
+  case "$board" in cro-l03) sed -i /current_cmd/d "$TMPDIR/ch-switches";; esac
+  # Final MSM8953 rule, restricted to this board and an unselected switch.
+  # Never impose the upstream override over an existing/manual choice.
+  if [ "$board" = msm8953 ] && [ -z "$(_get_prop chargingSwitch | tr -d '() ')" ] \
+    && _grep '^battery/charging_enabled 1 0$' "$TMPDIR/ch-switches"; then
+    ng_save_switch 'battery/charging_enabled 1 0 --' || :
+  fi
 }
+ng_oem_defaults
 
 # set batt_slate_mode as default charging control file for Exynos/Samsung devices
 # this prevents the "battery level stuck at 70%" issue
 ! _grep '^battery/batt_slate_mode 0 1' $TMPDIR/ch-switches \
   || [ -n "$(_get_prop chargingSwitch)" ] \
-  || _set_prop chargingSwitch "(battery/batt_slate_mode 0 1)"
+  || ng_save_switch "battery/batt_slate_mode 0 1"
 
 unset -f _grep _get_prop _set_prop
 unset configVer defaultConfVer

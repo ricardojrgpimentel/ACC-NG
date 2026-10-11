@@ -9,4 +9,4 @@ updateJson=https://raw.githubusercontent.com/ricardojrgpimentel/ACC-NG/main/modu
 ngApiVersion=1
 upstreamVersionCode=202310160
 ngConfigSchema=202310160
-ngCapabilities=info-key-value-si,capacity-six,resume-temperature,resume-temperature-override,manual-discharge-polarity,ng-notifications,power-limits-status
+ngCapabilities=info-key-value-si,capacity-six,resume-temperature,resume-temperature-override,manual-discharge-polarity,ng-notifications,power-limits-status,sensor-status

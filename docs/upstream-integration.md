@@ -138,3 +138,33 @@ Validation: 79 engine tests on host (77 passed, two Android-only skipped),
 79 passed with the Android fixture runners on Samsung SM-G975F, and all 35
 runtime/installer scripts passed Android shell syntax. Shared fixture export
 checks passed. These results do not certify live upgrade or explicit rollback.
+
+
+## I5 — R2 OEM switches and physical sensor discovery (working increment)
+
+11 October 2026. Code integrated on the roadmap branch; the installed/bundled
+candidate remains I4 until the remaining core groups receive joint packaging.
+No new source or release is published. API 1/schema 202310160 remain.
+
+R2.2: adapt final ASUS, FP5/qcom, charger/bypass and OEM switches, deduplicate
+Oplus, restrict board rules to exact MSM8916/MSM8937/CRO-L03/MSM8953/MT6795.
+Do not modify the shipped catalogue at runtime or overwrite manual switches.
+Wireless boost, forced fast charge and Oplus cool_down remain explicit
+manual/plugin experiments rather than automatic candidates.
+
+R2.3: split Nexus 10 status/capacity, missing uevent, battery/BMS/alternative
+current and temperature nodes. Validate reads and units; prefer battery current
+and identify charger-input fallback separately (never battery idle/calibration).
+Report unavailable measurements without fake 0 A, 25 C or 3900 mV readings.
+The loop pauses the selected control with a diagnostic if protective telemetry
+is lost; it does not probe controls or shut down from a malformed read.
+The additive --sensor-status protocol lets frontend diagnostics use the actual
+selected source/role/scale. Legacy engine diagnostics retain their old scale
+precedence. Microvolt conversion avoids Android mksh 32-bit multiplication.
+
+Origins adapted: 43ae881/939ed3f/f237b0b/d3752b1/705b762/289017b/a2177e8;
+only the bypass switch part of 09e38a4 is included. Existing current/status and
+thermal semantics remain for R3; legacy schema and manual calibration remain.
+12 sensor scenarios and the full 91-case suite passed with Android fixture
+runners (hardware reads/writes simulated). App validation is recorded alongside
+the final joint bundle; physical OEM certification on other devices is pending.
