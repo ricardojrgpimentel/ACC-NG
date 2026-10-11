@@ -29,6 +29,7 @@ ng_save_switch() (
   timeout 5 flock 0 <&7 || return 1
   . "$config"
   case "${chargingSwitch[*]-}" in *\ --) return 1;; esac
+  ng_config_locked=true
   s=$selected
   . "$execDir/write-config.sh"
 )

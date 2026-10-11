@@ -9,12 +9,9 @@ TMPDIR=/dev/.$domain/$id
 execDir=/data/adb/$domain/$id
 dataDir=/data/adb/$domain/${id}-data
 
-[ -f $execDir/disable ] && exit 14
-
-# wait until Android has fully booted
-until [ .$(getprop sys.boot_completed 2>/dev/null) = .1 ]; do
-  sleep 10
-done
+. "$execDir/engine-state.sh"
+ng_wait_boot || exit $?
+ng_engine_state initializing
 
 mkdir -p $TMPDIR
 export dataDir domain execDir id TMPDIR

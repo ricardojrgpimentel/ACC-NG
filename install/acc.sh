@@ -129,57 +129,9 @@ ext_app() {
 get_prop() { sed -n "s|^$1=||p" ${2:-$config}; }
 
 
-switch_fails() {
-  print_switch_fails
-  ! not_charging >/dev/null || {
-    print_resume
-    while not_charging; do
-      sleep 1
-    done
-  }
-  return 10
-}
-
-
 test_charging_switch() {
-
-  local idleMode=false
-  local failed=false
-  local acc_t=true
-  chargingSwitch=($@)
-
-  echo
-
-  [ -n "${swCount-}" ] \
-    && echo "$swCount/$swTotal: ${chargingSwitch[@]-}" \
-    || echo "${chargingSwitch[@]-}"
-
-  echo "chargingSwitch=($*)" > $TMPDIR/.sw
-  flip_sw off
-  ! [ $? -eq 2 ] || {
-    flip_sw on
-    switch_fails
-    return 10
-  }
-
-  ${blacklisted:-false} && {
-    print_blacklisted
-    return 10
-  }
-
-  ! not_charging && failed=true || {
-    [ $_status = Idle ] && idleMode=true
-  }
-
-  flip_sw on 2>/dev/null
-
-  if ! $failed && ! not_charging; then
-    print_switch_works
-    echo "- battIdleMode=$idleMode"
-    $idleMode && return 15 || return 0
-  else
-    switch_fails
-  fi
+  . "$execDir/switch-test.sh"
+  ng_test_switch "$@"
 }
 
 
@@ -249,10 +201,8 @@ parse_switches() {
 
 
 rollback() {
-  rm -rf $execDir/*
-  cp -a $dataDir/backup/* $execDir/
-  mv -f $execDir/config.txt $config
-  $TMPDIR/accd --init
+  . "$execDir/rollback.sh"
+  ng_rollback "${1-}"
 }
 
 
@@ -298,11 +248,7 @@ misc_stuff "${1-}"
 ! tt "${1-}" "*/*" || shift
 
 
-# reset broken/obsolete config
-(set +x; . $config) > /dev/null 2>&1 \
-  || cat $execDir/default-config.txt > $config
-
-. $config
+src_cfg
 
 
 # load default language (English)
@@ -344,8 +290,13 @@ case "${1-}" in
     . $execDir/write-config.sh
   ;;
 
+  --import)
+    . "$execDir/config-transaction.sh"
+    ng_import_config "${2-}"
+  ;;
+
   -b|--rollback)
-    rollback
+    rollback "${2-}"
   ;;
 
   -c|--config)
@@ -383,21 +334,21 @@ case "${1-}" in
     cooldown_current=
     cooldown_custom=
     cooldown_pause=
-    max_charging_current=
-    max_charging_voltage=
-    max_temp=
+    max_charging_current="${maxChargingCurrent[*]-}"
+    max_charging_voltage="${maxChargingVoltage[*]-}"
+    max_temp=${temperature[1]}
     off_mid=false
-    resume_temp=
-    temp_level=0
+    resume_temp=${temperature[2]}
+    temp_level=$tempLevel
     pause_capacity=${_two:-100}
     resume_capacity=$((pause_capacity - 2))
 
-    cp -f $defaultConfig $TMPDIR/.acc-f-config
+    cp -p "$config" "$TMPDIR/.acc-f-config"
     config=$TMPDIR/.acc-f-config
     . $execDir/write-config.sh
     print_charging_enabled_until ${_two:-100}%
     echo
-    echo ':; ! online && [ $(cat $battCapacity) -ge ${capacity[2]} ] && exec $TMPDIR/accd || :' >> $config
+    echo ': force_resume=; power=0; ng_power_state || power=$?; [ "$power" != 1 ] || exec "$TMPDIR/accd"' >> "$config"
 
      # additional options
     case "${2-}" in
@@ -517,112 +468,14 @@ case "${1-}" in
   ;;
 
 
-  -t|--test)
-
+  -t|--test|-t[0-9]*)
+    case "$1" in -t|--test) ng_test_attempts=6;; *) ng_test_attempts=${1#-t};; esac
+    case "$ng_test_attempts" in ''|*[!0-9]*) exit 11;; esac
+    [ "$ng_test_attempts" -ge 1 ] && [ "$ng_test_attempts" -le 35 ] || exit 11
     shift
-    parsed=
-    exitCode_=10
-    exitCode=$exitCode_
-    print_wait
-    print_unplugged
-
-    ! daemon_ctrl stop > /dev/null && daemonWasUp=false || {
-      daemonWasUp=true
-      echo "#!/system/bin/sh
-        sleep 2
-        exec $TMPDIR/accd $config_" > $TMPDIR/.accdt
-      chmod 0755 $TMPDIR/.accdt
-    }
-
-    . $execDir/acquire-lock.sh
-
-    grep -Ev '^$|^#' $config > $TMPDIR/.config
-    config=$TMPDIR/.config
-
-    exxit() {
-      [ -z "$parsed" ] || {
-        cat $TMPDIR/ch-switches $_parsed 2>/dev/null > $parsed \
-          && sort -u $parsed | sed 's/ $//; /^$/d' > $TMPDIR/ch-switches
-      }
-      [ ! -f $TMPDIR/.sw ] || {
-        while IFS= read line; do
-          [ -n "$line" ] || continue
-          ! grep -q "$line " $TMPDIR/.sw || sed -i "\|$line|d" $dataDir/logs/write.log
-        done < $dataDir/logs/write.log
-      }
-      ! $daemonWasUp || start-stop-daemon -bx $TMPDIR/.accdt -S --
-      exit $exitCode
-    }
-
-    set +e
-    trap exxit EXIT
-    not_charging && enable_charging > /dev/null
-
-    not_charging && {
-      (print_wait_plug
-      while not_charging; do
-        sleep 1
-        set +x
-      done)
-    }
-
-    [ "${1-}" != -- ] || shift #legacy, AccA
-    . $execDir/read-ch-curr-ctrl-files-p2.sh
-    : > /sdcard/Download/acc-t_output-${device}.log
-
-    if [ -z "${2-}" ]; then
-      ! tt "${1-}" "p|parse" || parsed=$TMPDIR/.parsed
-      [ -z "$parsed" ] || {
-        _parsed=$dataDir/logs/parsed.log
-        if parse_switches > $parsed; then
-          set -- $parsed
-          ! ${verbose:-true} || {
-            print_panic
-            read -n 1 a
-            echo
-            case "$a" in
-              ""|y) edit $parsed;;
-              a) exit;;
-            esac
-          }
-        else
-          echo
-          exit
-        fi
-      }
-      swCount=1
-      swTotal=$(wc -l ${1-$TMPDIR/ch-switches} | cut -d ' ' -f 1)
-      while read _chargingSwitch; do
-        echo "x$_chargingSwitch" | grep -Eq '^x$|^x#' && continue
-        [ -f "$(echo "$_chargingSwitch" | cut -d ' ' -f 1)" ] && {
-          { test_charging_switch $_chargingSwitch; echo $? > $TMPDIR/.exitCode; } \
-            | tee -a /sdcard/Download/acc-t_output-${device}.log
-          rm $TMPDIR/.sw 2>/dev/null || :
-          swCount=$((swCount + 1))
-          exitCode_=$(cat $TMPDIR/.exitCode)
-          if [ -n "$parsed" ] && [ $exitCode_ -ne 10 ]; then
-            grep -q "^$_chargingSwitch$" $_parsed 2>/dev/null \
-              || echo "$_chargingSwitch" >> $_parsed
-          fi
-          case $exitCode in
-            15) ;;
-            0) [ $exitCode_ -eq 15 ] && exitCode=15;;
-            *) exitCode=$exitCode_;;
-          esac
-        }
-      done < ${1-$TMPDIR/ch-switches}
-      echo
-    else
-      { test_charging_switch "$@"; echo $? > $TMPDIR/.exitCode; } \
-        | tee -a /sdcard/Download/acc-t_output-${device}.log
-      rm $TMPDIR/.sw 2>/dev/null || :
-      exitCode=$(cat $TMPDIR/.exitCode)
-      echo
-    fi
-
-    print_acct_info
-    echo
-    exit $exitCode
+    . "$execDir/switch-test.sh"
+    ng_test_command "$@"
+    exit $?
   ;;
 
 
@@ -644,7 +497,7 @@ case "${1-}" in
         -f|--force)
         ;;
         -k|--insecure)
-          insecure=--insecure
+          echo "Insecure downloads are disabled"; exit 11
         ;;
         -n|--non-interactive)
         ;;
@@ -667,12 +520,12 @@ case "${1-}" in
         || chmod -R 0755 /data/adb/vr25/bin
     }
 
-    if which curl >/dev/null; then
-      curl $insecure -Lo $TMPDIR/install-online.sh https://raw.githubusercontent.com/ricardojrgpimentel/ACC-NG/$reference/install-online.sh
-    else
-      PATH=${PATH#*/busybox:} /dev/.vr25/busybox/wget -O $TMPDIR/install-online.sh --no-check-certificate \
-        https://raw.githubusercontent.com/ricardojrgpimentel/ACC-NG/$reference/install-online.sh
-    fi
+    command -v curl >/dev/null || exit 3
+    case "$reference" in -*|*..*|*[!a-zA-Z0-9_./-]*) exit 11;; esac
+    curl --fail --proto '=https' --proto-redir '=https' --connect-timeout 10 --max-time 120 -Lo "$TMPDIR/install-online.sh.new" \
+      "https://raw.githubusercontent.com/ricardojrgpimentel/ACC-NG/$reference/install-online.sh" || exit $?
+    /system/bin/sh -n "$TMPDIR/install-online.sh.new" || exit 5
+    mv "$TMPDIR/install-online.sh.new" "$TMPDIR/install-online.sh"
     trap - EXIT
     set +eu
     installDir=$(readlink -f $execDir)

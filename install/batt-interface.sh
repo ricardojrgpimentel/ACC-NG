@@ -2,6 +2,7 @@
 . "$execDir/sensor-discovery.sh"
 
 idle_discharging() {
+  case "$curNow" in ''|*[!0-9-]*|-) return 1;; esac
   [ ${curNow#-} -gt $idleThreshold ] || {
     _status=Idle
     return 0
@@ -65,7 +66,8 @@ read_status() {
   case "$status" in
     Charging|Discharging) printf %s $status;;
     Not?charging) online && printf Idle || printf Discharging;;
-    *) printf Discharging;;
+    Full|Idle) printf Idle;;
+    *) printf Unknown;;
   esac
 }
 
@@ -105,12 +107,13 @@ status() {
 
   if [ -n "${battStatusOverride-}" ]; then
     if tt "$battStatusOverride" "Discharging|Idle"; then
-      [ $(cat ${chargingSwitch[0]}) != ${chargingSwitch[2]} ] || _status=$battStatusOverride
+      local offValue=$(parse_value "${chargingSwitch[2]}") || return 1
+      [ "$(cat "${chargingSwitch[0]}")" != "$offValue" ] || _status=$battStatusOverride
     else
       _status=$(set -eu; eval '$battStatusOverride') || :
     fi
   elif $battStatusWorkaround; then
-    [ $_status = Idle ] || idle_discharging
+    [ $_status = Idle ] || idle_discharging || :
   fi
 
   [ -z "${exitCode_-}" ] || echo -e "  switch: ${switch:--} (${swValue:-N/A})\tcurrent: $(calc $curNow \* 1000 / ${ampFactor:-$ampFactor_} | xargs printf %.f)mA ($_status)"

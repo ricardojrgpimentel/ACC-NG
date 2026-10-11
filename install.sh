@@ -13,6 +13,14 @@ SKIPUNZIP=1
 echo
 id=acc
 domain=vr25
+KSU=${KSU:-false}
+APATCH=${APATCH:-false}
+root_manager=unknown
+if [ "$APATCH" = true ]; then root_manager=apatch
+elif [ "$KSU" = true ]; then root_manager=kernelsu
+elif command -v magisk >/dev/null 2>&1 && magisk -v >/dev/null 2>&1; then root_manager=magisk
+elif [ -n "${MAGISK_VER_CODE-}" ]; then root_manager=magisk
+fi
 data_dir=/data/adb/$domain/${id}-data
 
 
@@ -50,7 +58,7 @@ trap exxit EXIT
 #BB#
 bin_dir=/data/adb/vr25/bin
 busybox_dir=/dev/.vr25/busybox
-magisk_busybox="/data/adb/ksu/bin/busybox /data/adb/magisk/busybox"
+magisk_busybox="/data/adb/ksu/bin/busybox /data/adb/ap/bin/busybox /data/adb/magisk/busybox"
 [ -x $busybox_dir/ls ] || {
   mkdir -p $busybox_dir
   chmod 0755 $busybox_dir $bin_dir/busybox 2>/dev/null || :
@@ -180,10 +188,11 @@ migration_started=true
 
 /system/bin/sh $srcDir/install/uninstall.sh install
 KSU=${KSU:-false}
-$KSU || { [ ! -f /data/adb/ksu/bin/busybox ] || KSU=true; }
+[ "$APATCH" != true ] || KSU=true
 cp -R $srcDir/install/ $installDir/$id
 installDir=$(readlink -f $installDir/$id)
 cp $srcDir/module.prop $installDir/
+printf '%s\n' "$root_manager" > "$installDir/root-manager"
 cp -f $srcDir/README.* $data_dir/
 
 
@@ -264,6 +273,7 @@ esac
 
 ! $KSU || {
   upModDir=${magiskModDir}_update
+  mkdir -p "$upModDir"
   rm -rf $upModDir/$id 2>/dev/null || :
   cp -a $installDir $upModDir
   touch $installDir/update

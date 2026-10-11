@@ -168,3 +168,49 @@ thermal semantics remain for R3; legacy schema and manual calibration remain.
 12 sensor scenarios and the full 91-case suite passed with Android fixture
 runners (hardware reads/writes simulated). App validation is recorded alongside
 the final joint bundle; physical OEM certification on other devices is pending.
+
+## I6 — bounded probes, configuration transactions and lifecycle
+
+Working candidate v1.0.8-ng (202610118), 11 October 2026, API 1 and schema
+202310160. R2 discovery is combined with R3 bounded probes: 45 second total
+budget, three consistent samples, exclusive test/daemon locks, exact control
+journals, TERM cleanup and startup recovery after a killed probe. Manual
+switches survive missing nodes; automatic candidate lists are snapshotted and
+bounded, failed recovery returns 7. Polarity is learned over three successive
+physical discharge samples without waiting for unplug. Thermal `r` only relaxes
+thermal pauses, idle retries stop after two attempts, and cooldown waits inspect
+sensors/unplug/shutdown every second.
+
+R4 writers share the configuration mutex and commit a syntax-checked file by
+rename, preserve extension assignments, escape hook quotes, retain last-good
+and invalid sources, reject incompatible units and malformed values. Partial
+raw-schema import accepts CRLF and replaces scripts by name. Scheduler stamps
+are per command and calendar day, including midnight, preserving app DJS.
+
+R5 exposes boot-aware engine-state without delaying status calls, respects
+disable during bounded boot waiting and normal operation, records explicit
+root manager flags and supports APatch BusyBox independently of detection.
+Official manager references: https://kernelsu.org/guide/module.html and
+https://apatch.dev/apm-guide.html. These document environment flags and BusyBox
+paths; physical KSU/APatch certification remains pending.
+
+Tarball/online installation uses private extraction directories and validates
+one NG root, regular files/directories, paths, member count and total size.
+Warnings from Android tar also reject unsafe absolute paths. Online downloads
+require HTTPS, verified TLS, HTTP success and time/size limits. Rollback selects
+a dated NG snapshot, validates it, atomically replaces the module and keeps the
+current profile plus a backup of the replaced module. Diagnostic exports copy
+bounded tails under an exclusive lock and include sensors, readiness, limits
+and the latest switch result; failure export is asynchronous in the daemon.
+
+Existing R6 safety: physical capacity remains the control/shutdown source;
+presentation masks clamp to 0–100. Temporary `acc -f` uses a copy of the profile,
+keeps OEM current/voltage and thermal limits, and returns to the regular daemon
+on confirmed unplug. New optional idle_apps, Encore and percentage-current UI
+remain outside this candidate, as permitted by R6's optional gate.
+
+Host: 120 behavioral cases passed (two Android-only cases skipped). The shared
+source contract covers the added runtime helpers and both installers. Android,
+app and physical candidate evidence is maintained in AccA-NG's
+`docs/acc-ng-validation.md`; this source record does not certify unavailable
+OEM devices/root managers or unsupported limit nodes.

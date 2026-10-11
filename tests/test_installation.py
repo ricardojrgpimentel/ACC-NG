@@ -13,7 +13,7 @@ from contract_cases import ROOT, run
 
 class InstallationTests(unittest.TestCase):
     def scenario(self, staging='acc-upgrade', fail_copy=False, clean=False, uninstall=False,
-                 tarball=False):
+                 tarball=False, manager=None):
         shell = '/system/bin/sh' if os.environ.get('ACC_TEST_ADB_SERIAL') else '/bin/bash'
 
         def write(path, text):
@@ -82,7 +82,7 @@ exec "$real_cp" "$@"''',
             command = '"$fixture_root/data/local/tmp/' + staging + '/install-tarball.sh"'
         script += '''trap 'e=$?; if [ "$e" != 0 ]; then cat output.log data/adb/vr25/acc-data/logs/install.log 2>/dev/null || :; fi' EXIT
 '''
-        script += 'set +e\nKSU=false ' + shlex.quote(shell) + ' ' + command + ' > output.log 2>&1\nstatus=$?\nset -e\n'
+        script += 'set +e\nKSU=' + ('true ' if manager == 'kernelsu' else 'false ') + ('APATCH=true ' if manager == 'apatch' else '') + shlex.quote(shell) + ' ' + command + ' > output.log 2>&1\nstatus=$?\nset -e\n'
         # Assert results inside the same fixture directory before it is removed.
         script += '''test -f data/local/tmp/acc-keep/sentinel
 test -f data/local/tmp/acc_keep/sentinel
@@ -115,6 +115,10 @@ test ! -e data/adb/modules/acc/new-runtime
                 script += '''test ! -e data/adb/modules/acc/old-runtime
 test -f data/adb/modules/acc/new-runtime
 '''
+        if manager and not fail_copy:
+            script += 'test "$(cat data/adb/modules/acc/root-manager)" = ' + manager + '\n'
+            if manager in ('kernelsu', 'apatch'):
+                script += 'test -f data/adb/modules_update/acc/module.prop\n'
         result = run(script + 'echo verified\n')
         self.assertEqual({'code': 0, 'output': 'verified'}, result,
                          result['output'][-3000:])
@@ -138,3 +142,8 @@ test -f data/adb/modules/acc/new-runtime
 
     def test_tarball_failed_upgrade_recovers_before_source_cleanup(self):
         self.scenario(staging='acc-tarball-recovery', tarball=True, fail_copy=True)
+
+    def test_explicit_root_manager_flags_do_not_depend_on_busybox_presence(self):
+        for manager in ('kernelsu', 'apatch'):
+            with self.subTest(manager=manager):
+                self.scenario(manager=manager)

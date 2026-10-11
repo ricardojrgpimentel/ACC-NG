@@ -2,10 +2,10 @@
   "version": {
     "current": {
       "code": 0,
-      "output": "v1.0.7-ng (202610117)"
+      "output": "v1.0.8-ng (202610118)"
     }
   },
-  "module": "id=acc\ndomain=vr25\nname=Advanced Charging Controller NG (ACC-NG)\nversion=v1.0.7-ng\nversionCode=202610117\nauthor=Ricardo Pimentel; based on ACC by VR25\ndescription=Charging controller for AccA-NG. Applies charging limits and temperature settings configured in the app and keeps control active in the background.\nupdateJson=https://raw.githubusercontent.com/ricardojrgpimentel/ACC-NG/main/module.json\nngApiVersion=1\nupstreamVersionCode=202310160\nngConfigSchema=202310160\nngCapabilities=info-key-value-si,capacity-six,resume-temperature,resume-temperature-override,manual-discharge-polarity,ng-notifications,power-limits-status,sensor-status",
+  "module": "id=acc\ndomain=vr25\nname=Advanced Charging Controller NG (ACC-NG)\nversion=v1.0.8-ng\nversionCode=202610118\nauthor=Ricardo Pimentel; based on ACC by VR25\ndescription=Charging controller for AccA-NG. Applies charging limits and temperature settings configured in the app and keeps control active in the background.\nupdateJson=https://raw.githubusercontent.com/ricardojrgpimentel/ACC-NG/main/module.json\nngApiVersion=1\nupstreamVersionCode=202310160\nngConfigSchema=202310160\nngCapabilities=engine-state,atomic-config,partial-import,bounded-switch-test,info-key-value-si,capacity-six,resume-temperature,resume-temperature-override,manual-discharge-polarity,ng-notifications,power-limits-status,sensor-status",
   "config": {
     "default": {
       "code": 0,
@@ -95,7 +95,7 @@
     },
     "failed": {
       "code": 10,
-      "output": "battery/charging_enabled 1 0\nSwitch failed"
+      "output": "battery/charging_enabled 1 0\nSwitch test failed: 10"
     },
     "list": {
       "code": 0,
@@ -103,31 +103,40 @@
     }
   },
   "sources": {
-    "install.sh": "1927489b8ceeb0c546ab3d9cb09b809770c5c08973c494f85e1e386e3d96a780",
+    "install.sh": "40d3b2bd62bf12391fcaa1a42e6411ad740c969521df1547e969cff94d687ad2",
     "install/uninstall.sh": "68ac72b6d93d6b4af802b54045261412580e1075aabb87027a17d85f27660f5c",
-    "install-tarball.sh": "a6873cfe2dd3608392db522299c86d2e87a42e51eaa28d5f8ff41a56297ff1dc",
-    "install-online.sh": "6d8831a8ae99b68408f99f4c0bcd3329bbd352413372c76e4ebdc274f4f789fc",
-    "install/acca.sh": "a3950eb9dbadc1872b5bd053d584be14bae1b220fea8571663027bdbd5395a5c",
-    "install/acc.sh": "24f887fc26df13504e1384e7576eff3aa55444fedc0ce3f3f56823d0ab07e6f7",
+    "install-tarball.sh": "6b4908a9f5159be15ace99f7e63c987c5c37fc2def197eb15954a26d721ff6d4",
+    "install-online.sh": "b62f330877374c4b2c92dcaa054aa49719962481d0c70951854abb351174124c",
+    "install/acca.sh": "77069460b46276db2260796c9623986f81f248b95bfd043258dcc06e2ff3c145",
+    "install/acc.sh": "c0419d6156b13abf19c08effafe2b500b64438bcf0fe87d77e2000b5a86ab72b",
     "install/batt-info.sh": "74bb68afc82f5e7406946fc862f1b4481a1ad72e69718162c1193dcd398eacee",
-    "install/batt-interface.sh": "bc79abed78ec3aff26830997566e87f48820759da1364b8c1e7395c120128d3f",
+    "install/batt-interface.sh": "5b34801d95e2fe8ec51c441f22881bd8552aee9eba8f685b7b787be73f66afa2",
     "install/print-config.sh": "00e297b859ca809819f36ad7a4a88b189d7df950d2da2be14b286b9a508e7cba",
     "install/default-config.txt": "c92d7b9ab43678eb311d2de4b53a0342d8df024801387cfa46a86666f97fc12e",
-    "install/write-config.sh": "3cc17b8dc0daffc610669381219d914fd8fb1932ce47e75489081ab77d6daee6",
-    "install/set-prop.sh": "15fbc94f1a88d19bc692089aca9208a5bfb145624a55007b66316a16ca73bc80",
+    "install/write-config.sh": "b28b0ef2b67fd989416b8c81e84fde80de131d76fc9ab0e8ecf072e21f47433a",
+    "install/set-prop.sh": "b1c1c134b71846c1ecaffc00766c45cea0c59bb1ca66c94f7e28701456cb44e5",
     "install/external-power.sh": "c03a4131a9fc049010d6afdc8e93ee679b18cc6005871fff93876e0fc255edce",
     "install/control-discovery.sh": "676b04d522768224d1c604b42bdb2556eaa75e2d9415b74c66aee065f83b3059",
-    "install/ng-power-limits.sh": "2d3d56137f3a9930cbc299b2c55bf195f4285b214830b63467278d4b14979da4",
+    "install/ng-power-limits.sh": "2171800fac0b744aa49490a974feb58bdaefb19d521f14aad020cfde901b2f17",
     "install/limit-control.sh": "5e20599de5a50a648f19d276a9fa4bfdf5ca6bebe75fa7383c807d782f08754f",
     "install/control-write.sh": "335871d35819a787c536e87d47c6b96658f59ada2bcaa3aadebdd4d899e40b27",
     "install/set-ch-curr.sh": "a27a3388a2c75835c88ea4171c0d98fe84a543a290a7369a0181e80311076a95",
     "install/set-ch-volt.sh": "0457307c69d1ee965eed9f73824028c7a732edb58311a9e1f285392344633a36",
-    "install/accd.sh": "e646df73ac472f719db1a07c8ac985a2ec82b3b4ed0063668805299c803e1ea7",
+    "install/accd.sh": "0578ab67a3608869ddf92f1d026acdd9d1698e133a7f04b8f46324514bb1856d",
     "install/ng-events.sh": "835849d54a8821d3796b0a67c7314faa9e5622aefefd30491ecf1faab9a94204",
-    "install/misc-functions.sh": "8192eb5bbf38c65ed76018bc4843ca47f99e331b451eb75ff1375806c74ab3d0",
-    "install/sensor-discovery.sh": "a96e7554cc53a11e66642ec0d62fb70e61cd769af4fb559255ce5326bb54d7c2",
+    "install/misc-functions.sh": "84e088ca6eb92b7bdf351ab974e0761b5b6c95cd11feea8a96e7491c40aa19a2",
+    "install/sensor-discovery.sh": "f593ca2ecb4b15c08ad487a5c9781a520366ab170958fbb179ccc59ae1bddd32",
     "install/ctrl-files.sh": "3a4be1144f8fe3422d2a240f4810df73ad70d8391b9237eae367d1d4a26b187a",
-    "install/oem-custom.sh": "03888acf34b8167bddc448a209c6053cff54999c55b639abb20217e603206038"
+    "install/oem-custom.sh": "3e20effbec2ab6e6b4044ed349b51d603c3ce08884f37e06b425eede25978371",
+    "install/switch-test.sh": "11e25dab10778192cc133486fdcd8c25580516e633c6d9b5953222fb1b4dc724",
+    "install/config-transaction.sh": "43e427e3ca65b63c91b7338e99d56d8234d8984ea78b3cec7747ab2843cfd585",
+    "install/engine-state.sh": "818935f3a0a5597081436876f6a37e4a7329dc6463a740aa65d3dcd12ab49ef7",
+    "install/service.sh": "65f2dd311330aea92d2ad0d086b31ee985b75f6b9e0f1cb4d94d988978257f90",
+    "install/diagnostics.sh": "3e65cc9b08f21404695a5e30fd7b10f47568be661f26634ac1eacffbb45271b4",
+    "install/logf.sh": "ba162301a4e09c45370f9e6deb7500c81893ebfb456341651ed26955dae924c2",
+    "install/rollback.sh": "9a4ac6ce514e0b783162fda19e2ceb3306a6fde9ee2752717e057a2e93065ea6",
+    "install/setup-busybox.sh": "7e57144e1363d15f6a0f9adb5c81467e182810f7b014309446d5e4812605519b",
+    "install/archive-check.sh": "ecd87c119eb9bdfef5e831bc1c03e5f6d36a3c59694d644f32fc3d025ca50638"
   },
   "power-limits": {
     "pending": {

@@ -24,8 +24,8 @@ daemon_ctrl() {
 
 
 src_cfg() {
-  /system/bin/sh -n $config 2>/dev/null || cat $execDir/default-config.txt > $config
-  . $config
+  . "$execDir/config-transaction.sh"
+  ng_load_config
 }
 
 
@@ -74,6 +74,12 @@ esac
 
 case "$@" in
 
+  --engine-status)
+    . "$execDir/engine-state.sh"
+    ng_print_engine_state
+    exit 0
+  ;;
+
   --sensor-status)
     src_cfg
     . "$execDir/batt-interface.sh"
@@ -120,6 +126,7 @@ case "$@" in
     set +o sh 2>/dev/null || :
     exec 4>"$TMPDIR/.ng-config.lock"
     timeout 5 flock 0 <&4 || exit 1
+    ng_config_locked=true
     shift
 
     . $defaultConfig

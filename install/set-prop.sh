@@ -12,6 +12,12 @@ print_ss_() {
 set_prop() {
 
   local restartDaemon=false
+  case "${1-}" in p|--print|d|--print-default|s:|--charging*witch:) :;; *)
+    exec 6>"$TMPDIR/.ng-config.lock" || return 1
+    timeout 5 flock 0 <&6 || return 1
+    local ng_config_locked=true
+    src_cfg;;
+  esac
 
   case ${1-} in
 

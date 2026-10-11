@@ -147,7 +147,7 @@ echo 300 > battery/temp
 ng_discover_battery
 rm battery/temp
 capacity=(2 101 50 60 false false); loopDelay=(1 1)
-flip_sw() { echo "CONTROL:$1"; }
+execDir=$TMPDIR; ng_engine_state() { :; }; flip_sw() { echo "CONTROL:$1"; }
 notif() { echo DIAGNOSTIC; }
 sleep() { exit 0; }
 is_charging() { echo UNEXPECTED_PROBE; exit 99; }

@@ -81,6 +81,8 @@ ng_discover_battery() {
 
 ng_telemetry_valid() {
   local value= threshold=
+  value=$(ng_sensor_status "$battStatus") || return 1
+  [ "$value" != Unknown ] || return 1
   value=$(ng_sensor_number "$battCapacity") || return 1
   [ "$value" -ge 0 ] && [ "$value" -le 100 ] || return 1
   value=$(ng_sensor_number "$temp") || return 1

@@ -17,7 +17,7 @@ class EngineTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             p=pathlib.Path(td);(p/'cap').write_text(str(level));(p/'temp').write_text(str(temperature))
             script=f'TMPDIR={td}; battCapacity={td}/cap; temp={td}/temp; capacity=(2 101 {resume} {pause} false false); temperature=(35 50 45 55); loopDelay=(1 1); offMid=false; allowIdleAbovePcap=true; resetBattStats=(false false false); cooldownRatio=(); cooldownCustom=(); cooldown=false\n'
-            script+='ng_telemetry_valid() { return 0; }; t() { test "$@"; }; tt() { return 1; }; volt_now() { echo 3900; }; ng_observe() { return 0; }; force_off() { :; }; disable_charging() { echo OFF; }; enable_charging() { echo ON; }; sleep() { exit 0; }; _uptime() { return 1; }; not_charging() { return 1; }; is_charging() { '+('return 0' if charging else 'return 1')+'; };\n'
+            script+='execDir=$TMPDIR; ng_engine_state() { :; }; ng_telemetry_valid() { return 0; }; t() { test "$@"; }; tt() { return 1; }; volt_now() { echo 3900; }; ng_observe() { return 0; }; force_off() { :; }; ng_disable_safe() { disable_charging; }; disable_charging() { echo OFF; }; enable_charging() { echo ON; }; sleep() { exit 0; }; _uptime() { return 1; }; not_charging() { return 1; }; is_charging() { '+('return 0' if charging else 'return 1')+'; };\n'
             for n in ['_ge_pause_cap','_lt_pause_cap','_gt_resume_cap','_le_resume_cap','temp_ok','ctrl_charging']: script+=function(n)+'\n'
             return self.run_shell(script+'ctrl_charging')
 

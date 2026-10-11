@@ -16,7 +16,7 @@ if (set +x; . $config) > /dev/null 2>&1; then
     fi
   }
 else
-  cat $execDir/default-config.txt > $config
+  src_cfg || return 1
 fi
 
 # battery idle mode for OnePlus devices
@@ -59,7 +59,7 @@ ng_oem_defaults
 # set batt_slate_mode as default charging control file for Exynos/Samsung devices
 # this prevents the "battery level stuck at 70%" issue
 ! _grep '^battery/batt_slate_mode 0 1' $TMPDIR/ch-switches \
-  || [ -n "$(_get_prop chargingSwitch)" ] \
+  || [ -n "$(_get_prop chargingSwitch | tr -d '() ')" ] \
   || ng_save_switch "battery/batt_slate_mode 0 1"
 
 unset -f _grep _get_prop _set_prop
