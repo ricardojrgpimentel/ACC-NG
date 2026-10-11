@@ -80,3 +80,33 @@ ng_add_script() (
   printf '%s\n' "$*" > "$imported"
   ng_import_config "$imported"
 )
+
+ng_replace_config() (
+  local input=$1 candidate=
+  if ! ${ng_config_locked:-false}; then
+    exec 5>"$TMPDIR/.ng-config.lock" || return 1
+    timeout 5 flock 0 <&5 || return 1
+  fi
+  ng_config_check "$input" || return 11
+  candidate=$(mktemp "${config}.replace.XXXXXX") || return 1
+  trap 'rm -f "$candidate"' EXIT
+  trap 'exit 1' HUP INT TERM
+  cp "$input" "$candidate" || return 1
+  # Repairing an invalid config must not overwrite its last valid backup.
+  if ng_config_check "$config"; then
+    cp -p "$config" "${config}.last-good.new" && mv "${config}.last-good.new" "${config}.last-good" || return 1
+  fi
+  chmod 0600 "$candidate" && mv "$candidate" "$config"
+)
+
+ng_delete_scripts() (
+  local candidate=
+  exec 5>"$TMPDIR/.ng-config.lock" || return 1
+  timeout 5 flock 0 <&5 || return 1
+  local ng_config_locked=true
+  candidate=$(mktemp "${config}.delete.XXXXXX") || return 1
+  trap 'rm -f "$candidate"' EXIT
+  trap 'exit 1' HUP INT TERM
+  sed -E "\#$1#d" "$config" > "$candidate" || return 11
+  ng_replace_config "$candidate"
+)

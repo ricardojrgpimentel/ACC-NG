@@ -104,7 +104,10 @@ edit() {
          . "$execDir/config-transaction.sh"
          ng_add_script "$@"
        else printf '\n%s\n' "$*" >> "$file"; fi;;
-    d) sed -Ei "\#$2#d" $file;;
+    d) if [ "$file" = "$config" ]; then
+         . "$execDir/config-transaction.sh"
+         ng_delete_scripts "$2"
+       else sed -Ei "\#$2#d" "$file"; fi;;
 
     g) [ "$file" = "$config" ] || {
          install -m 666 $file /data/local/tmp/

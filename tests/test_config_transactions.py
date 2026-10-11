@@ -12,6 +12,56 @@ class ConfigurationTests(unittest.TestCase):
         script += 'echo 202310160 > .config-ver; : > .config-help\n' + body
         self.assertEqual({'code': 0, 'output': expected}, run(script))
 
+    def test_full_replacement_preserves_valid_backup_and_refuses_invalid_source(self):
+        self.check('''cp "$config" before
+echo 'capacity=(' > invalid
+ng_replace_config invalid && exit 99 || :
+cmp before "$config"
+echo 'vendorFeature=reset' > replacement
+ng_replace_config replacement
+cmp before "${config}.last-good"
+grep -Fx vendorFeature=reset "$config"
+''', 'vendorFeature=reset')
+
+    def test_script_removal_is_atomic_and_keeps_other_commands(self):
+        self.check('''echo ': night=; echo old' >> "$config"
+echo ': day=; echo kept' >> "$config"
+cp "$config" before
+ng_delete_scripts '^: night='
+cmp before "${config}.last-good"
+grep -Fx ': day=; echo kept' "$config"
+! grep -q '^: night=' "$config"
+''', ': day=; echo kept')
+
+    def test_failed_removal_commit_preserves_current_profile(self):
+        self.check('''echo ': night=; echo old' >> "$config"
+cp "$config" before
+mv() { for target; do :; done; [ "$target" != "$config" ] || return 42; command mv "$@"; }
+ng_delete_scripts '^: night=' && exit 99 || :
+cmp before "$config"; echo PRESERVED
+''', 'PRESERVED')
+
+    def test_cli_restart_does_not_inherit_configuration_writer_lock(self):
+        import os
+        shell = '/system/bin/sh' if os.environ.get('ACC_TEST_ADB_SERIAL') else '/bin/bash'
+        for arguments in ['r', 'current_workaround=true']:
+            with self.subTest(arguments=arguments):
+                self.check(function('set-prop.sh', 'set_prop') + '''
+execDir=$PWD; defaultConfig=$PWD/default-config.txt
+cp "$config" "$defaultConfig"; cp writer.sh write-config.sh
+printf %s ''' + shlex.quote(source('config-transaction.sh')) + ''' > config-transaction.sh
+src_cfg() { . "$config"; }
+daemon_ctrl() { return 0; }
+print_config_reset() { :; }
+cat > accd <<'SH'
+#!''' + shell + '''
+flock -n 0 <> "$TMPDIR/.ng-config.lock" || exit 99
+echo LOCK_FREE
+SH
+chmod +x accd
+export TMPDIR
+set_prop ''' + arguments + '\n', 'LOCK_FREE')
+
     def test_two_concurrent_writers_keep_profile_and_global_preferences(self):
         self.check('''
 ( pause_capacity=60; resume_capacity=50; . ./writer.sh ) & one=$!

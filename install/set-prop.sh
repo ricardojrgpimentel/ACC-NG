@@ -46,9 +46,12 @@ set_prop() {
     # reset config
     r|--reset)
       ! daemon_ctrl stop > /dev/null || restartDaemon=true
-      cat $defaultConfig > $config
+      . "$execDir/config-transaction.sh"
+      ng_replace_config "$defaultConfig" || return $?
       [ .${2-} = .a ] && rm $dataDir/logs/write.log $dataDir/logs/ps-blacklist.log 2>/dev/null || :
       print_config_reset
+      flock -u 0 <&6
+      exec 6>&-
       ! $restartDaemon || $TMPDIR/accd --init $config
       return 0
     ;;
@@ -147,7 +150,9 @@ set_prop() {
   fi
 
   # update config.txt
-  . $execDir/write-config.sh
+  . $execDir/write-config.sh || return $?
+  flock -u 0 <&6
+  exec 6>&-
 
   if $restartDaemon; then
     if [ ".${cw-${current_workaround-x}}" != .x ]; then
