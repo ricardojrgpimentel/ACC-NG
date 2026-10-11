@@ -245,3 +245,6 @@ the offMid request before applying the configured switch. The controller now
 applies a known boot pause before requiring net charging, keeps an unresolved
 request until automatic selection or leaving the interval, and retains the
 shutdown-temperature guard. Behavioral fixtures cover both paths.
+The boot-pause path forces the configured OFF write with bounded retries;
+regular disable logic can treat net discharge as already stopped and skip it.
+The regression executes the real retry helper so that a skipped write fails.

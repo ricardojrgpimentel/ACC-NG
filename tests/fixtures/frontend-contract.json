@@ -122,7 +122,7 @@
     "install/control-write.sh": "335871d35819a787c536e87d47c6b96658f59ada2bcaa3aadebdd4d899e40b27",
     "install/set-ch-curr.sh": "a27a3388a2c75835c88ea4171c0d98fe84a543a290a7369a0181e80311076a95",
     "install/set-ch-volt.sh": "0457307c69d1ee965eed9f73824028c7a732edb58311a9e1f285392344633a36",
-    "install/accd.sh": "398319992479eb4da35b960733a84b53ff4b12caed4e012427e09cdedcf264d8",
+    "install/accd.sh": "ee7047ce112b92c7bd09fa8ee552b6da2b0005f742dc03b45b61121650f7b14e",
     "install/ng-events.sh": "835849d54a8821d3796b0a67c7314faa9e5622aefefd30491ecf1faab9a94204",
     "install/misc-functions.sh": "7e70dfb463b5b11264ca74d2dc951f61ff28ce93b7917182b30ecffa6b6e5b23",
     "install/sensor-discovery.sh": "f593ca2ecb4b15c08ad487a5c9781a520366ab170958fbb179ccc59ae1bddd32",

@@ -257,7 +257,9 @@ if ! $init; then
   ng_disable_safe() {
     local attempt=0
     while [ "$attempt" -lt 3 ]; do
-      disable_charging && return 0
+      if [ "${1-}" = force ]; then
+        flip_sw off && return 0
+      else disable_charging && return 0; fi
       attempt=$((attempt + 1))
       [ "$attempt" = 3 ] || sleep 1
     done
@@ -299,7 +301,9 @@ if ! $init; then
       if $offMid && [ -f "$TMPDIR/.minCapMax" ] && _lt_pause_cap && _gt_resume_cap \
         && [ -n "${chargingSwitch[0]-}" ] && [ "$(cat "$temp")" -lt "$(( ${temperature[3]} * 10 ))" ]; then
         ng_pause_reason=reboot
-        ng_disable_safe || return 7
+        ng_disable_safe force || return 7
+        (set +eux; eval '${runCmdOnPause-}') || :
+        chDisabledByAcc=true
         force_off
         sleep ${loopDelay[1]}
         rm "$TMPDIR/.minCapMax" 2>/dev/null || :

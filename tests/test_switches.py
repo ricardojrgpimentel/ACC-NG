@@ -201,14 +201,15 @@ ng_pause_reason=temperature; _le_resume_cap; echo THERMAL_ONLY
         self.assertEqual({'code': 0, 'output': 'THERMAL_ONLY'}, run(script))
 
     def test_boot_pause_applies_known_control_before_net_charging_is_observed(self):
-        script = daemon_function('ctrl_charging') + '''
+        script = daemon_function('ctrl_charging') + '\n' + daemon_function('ng_disable_safe') + '''
 execDir=$PWD; offMid=true; chargingSwitch=(battery/enable 1 0)
 echo 300 > temperature; temp=$PWD/temperature; temperature=(35 50 45 55)
 loopDelay=(1 1); touch .minCapMax
 ng_telemetry_valid() { return 0; }; ng_engine_state() { :; }
 _ge_pause_cap() { return 1; }; _lt_pause_cap() { return 0; }; _gt_resume_cap() { return 0; }
 is_charging() { echo SHOULD_NOT_WAIT_FOR_CHARGING; return 1; }
-ng_disable_safe() { echo PAUSED; }; force_off() { :; }
+disable_charging() { echo SHOULD_NOT_SKIP_WRITE_BASED_ON_CURRENT; exit 99; }
+flip_sw() { [ "$1" = off ]; echo PAUSED; }; force_off() { :; }
 sleep() { echo "REASON:$ng_pause_reason"; exit 0; }
 ctrl_charging
 '''
