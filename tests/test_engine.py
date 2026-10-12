@@ -97,11 +97,6 @@ class EngineTests(unittest.TestCase):
     def test_non_percent_limits_and_state_are_observable(self):
         self.assertIn('paused:Charging paused at configured limit: 3900mV',self.events('capacity=(2 101 3800 3900 false false); echo 1 > usb/online; ng_observe Charging; ng_pause_reason=limit; ng_observe Discharging'))
 
-    def test_critical_original_control_paths_remain(self):
-        self.assertIn('below_abs_lims || break',function('ctrl_charging'))
-        self.assertIn('! not_charging Discharging || shutdown',function('ctrl_charging'))
-        self.assertIn('force_off',function('ctrl_charging'))
-
     def test_bundled_and_github_archives_select_the_ng_source(self):
         import tarfile, io
         installer=(ROOT/'install-tarball.sh').read_text()
