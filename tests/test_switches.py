@@ -246,6 +246,40 @@ chmod +x acca
                 self.assertIn('writes=3', result['output'])
                 self.assertNotIn('discharge_polarity=', result['output'])
 
+    def pending_on(self, power):
+        script = function('batt-interface.sh', 'not_charging') + '''
+mkdir battery; echo -250 > battery/current_now; echo -250 > previous
+TMPDIR=$PWD; currFile=battery/current_now; curThen=$PWD/previous
+chargingSwitch=(battery/enable 1 0); battStatusOverride=
+battStatusWorkaround=true; currentIsBattery=true; ampFactor_=1000
+idleThreshold=40; loopDelay=(3 9); flip=on; clock=0; checks=0; statuses=0
+tt() { case "$1" in */current_now) return 0;; *) return 1;; esac; }
+sleep() { clock=$((clock + $1)); }
+read_status() { echo Charging; } # kernel status can lag the actual unplug
+'''
+        if power == 'unplug':
+            script += '''ng_power_state() { checks=$((checks + 1)); [ "$checks" -lt 2 ]; }
+status() { _status=Discharging; return 0; }
+'''
+        else:
+            script += 'ng_power_state() { checks=$((checks + 1)); return ' + str(power) + '; }\n'
+            script += '''status() {
+  statuses=$((statuses + 1)); _status=Discharging
+  [ "$statuses" -lt 3 ] || { _status=Charging; return 1; }
+}
+'''
+        return run(script + 'not_charging || code=$?; printf "code=%s clock=%s status=%s\\n" "${code:-0}" "$clock" "$_status"\n')
+
+    def test_pending_on_verification_stops_when_cable_is_removed(self):
+        self.assertEqual({'code': 0, 'output': 'code=0 clock=3 status=Discharging'},
+                         self.pending_on('unplug'))
+
+    def test_pending_on_keeps_waiting_for_connected_or_unknown_power(self):
+        for power in [0, 2]:
+            with self.subTest(power=power):
+                self.assertEqual({'code': 0, 'output': 'code=1 clock=6 status=Charging'},
+                                 self.pending_on(power))
+
     def test_r_suffix_only_relaxes_thermal_pause_and_never_capacity_pause(self):
         script = ''.join(daemon_function(n) + '\n' for n in ['_lt_pause_cap', '_le_resume_cap']) + '''
 t() { test "$@"; }; tt() { case "$1" in *r) return 0;; *) return 1;; esac; }

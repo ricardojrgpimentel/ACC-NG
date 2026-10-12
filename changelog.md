@@ -3,7 +3,8 @@
 - Do not retry ON verification when external power is explicitly disconnected.
   This keeps protective telemetry and discharge-polarity samples on the normal
   loop interval instead of waiting for an unpowered switch to start charging.
-- Preserve resume for unknown incoming power, including OEM input pauses.
+- Interrupt an in-flight ON check when the cable is removed, even if the kernel
+  battery status still says Charging. Preserve resume for unknown OEM input pauses.
 - Add full controller-loop regressions for calibration and known/unknown power.
 
 # v1.0.8-ng (roadmap core candidate, unreleased)

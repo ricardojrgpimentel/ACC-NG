@@ -270,3 +270,9 @@ remain eligible for resume and do not learn polarity as disconnected.
 Physical evidence and final joint packaging are recorded in the app validation
 record. The initial cable test passed connection detection only; it is not
 relabeled as passing calibration. No release/updater metadata is promoted.
+
+The ON verification itself also checks incoming power each retry. If unplug
+happens after the request starts, it stops at the next three-second check rather
+than waiting the full 42 seconds. Native battery status may lag and does not
+prove charging after confirmed unplug. Separate fixtures verify that transition
+and retain normal waits for connected/unknown power.
