@@ -248,3 +248,25 @@ shutdown-temperature guard. Behavioral fixtures cover both paths.
 The boot-pause path forces the configured OFF write with bounded retries;
 regular disable logic can treat net discharge as already stopped and skip it.
 The regression executes the real retry helper so that a skipped write fails.
+
+
+## I7 — retain loop cadence during confirmed unplug
+
+12 October 2026. Candidate v1.0.9-ng/202610129, API 1/schema unchanged.
+A physical I6 cable trial recorded real disconnect/reconnect and discharge,
+but automatic polarity remained blank. The controller tried enabling charge
+at resume capacity even when incoming power was explicitly absent. That could
+spend 14 three-second ON-verification retries before the next polarity sample.
+
+The discharge branch now skips that ON request for known disconnected power.
+Unknown remains eligible for resume: an OEM's own input-cut must not prevent
+re-enabling a selected switch. Shutdown, capacity and thermal evaluation retain
+their existing paths. Controller-loop fixtures execute real is_charging/set_dp
+functions and simulate the observed unpowered-switch wait. Before the fix,
+three samples required 153 simulated seconds and three futile ON requests;
+afterward they take 27 seconds and no ON request. Connected/unknown controls
+remain eligible for resume and do not learn polarity as disconnected.
+
+Physical evidence and final joint packaging are recorded in the app validation
+record. The initial cable test passed connection detection only; it is not
+relabeled as passing calibration. No release/updater metadata is promoted.

@@ -269,7 +269,7 @@ if ! $init; then
 
   ctrl_charging() {
 
-    local count=0
+    local count=0 power=0
 
     while :; do
 
@@ -396,8 +396,14 @@ if ! $init; then
 
         # enable charging under <conditions>
         if _le_resume_cap && temp_ok; then
-          rm $TMPDIR/.forceoff* 2>/dev/null && sleep ${loopDelay[0]} || :
-          enable_charging
+          # With confirmed unplug there is no ON state to verify. Retrying it
+          # waits up to 42s and prevents successive polarity/telemetry samples.
+          # Unknown power can be our own OEM input pause and must allow resume.
+          power=0; ng_power_state || power=$?
+          if [ "$power" != 1 ]; then
+            rm $TMPDIR/.forceoff* 2>/dev/null && sleep ${loopDelay[0]} || :
+            enable_charging
+          fi
         fi
 
         # auto-shutdown
