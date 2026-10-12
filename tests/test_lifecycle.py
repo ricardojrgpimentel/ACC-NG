@@ -83,6 +83,7 @@ cat backup/rollback-*/module/runtime
 
     def test_diagnostic_export_caps_logs_and_times_out_platform_dump(self):
         helper = source('engine-state.sh')
+        helper = helper.replace('/proc/sys/kernel/random/boot_id', '$TMPDIR/fixture-boot-id')
         shell = '/system/bin/sh' if os.environ.get('ACC_TEST_ADB_SERIAL') else '/bin/bash'
         script = source('diagnostics.sh').replace('/sdcard/Download/', '$PWD/download/') + '\nprintf %s ' + shlex.quote(helper) + ' > engine-state.sh\n'
         script += 'printf %s ' + shlex.quote('#!' + shell + '\nexec sleep 30\n') + ''' > dumpsys
@@ -91,6 +92,8 @@ mkdir download
 cp dumpsys dmesg; sed -i 's/exec sleep 30/exit 0/' dmesg; cp dmesg logcat
 chmod +x dmesg logcat
 execDir=$PWD; device=fixture; mkdir logs
+echo fixture-boot > fixture-boot-id
+printf 'bootId=fixture-boot\nengineState=ready\n' > engine-state
 ng_print_sensor_status() { echo sensorStatusVersion=1; }
 ng_print_power_limits() { echo powerLimitsVersion=1; }
 dmesg() { :; }; logcat() { :; }

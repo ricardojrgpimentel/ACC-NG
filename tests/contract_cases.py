@@ -7,6 +7,7 @@ from pathlib import Path
 import shlex
 import subprocess
 import tempfile
+from host_tools import run_host
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -27,8 +28,7 @@ def run(commands):
     serial = os.environ.get('ACC_TEST_ADB_SERIAL')
     with tempfile.TemporaryDirectory(prefix='acc-contract-') as td:
         if not serial:
-            result = subprocess.run(['bash', '-c', script], cwd=td, capture_output=True,
-                                    text=True, timeout=15)
+            result = run_host(script, cwd=td, timeout=15)
         else:
             remote = subprocess.check_output(['adb', '-s', serial, 'shell',
                 'mktemp -d /data/local/tmp/acc-contract.XXXXXX'], text=True).strip()
