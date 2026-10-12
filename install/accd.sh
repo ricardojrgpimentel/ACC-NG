@@ -7,6 +7,7 @@
 . $execDir/acquire-lock.sh
 
 
+. "$execDir/engine-state.sh"
 init=false
 
 case "$*" in
@@ -45,6 +46,12 @@ if ! $init; then
   }
 
 
+  _gt_pause_margin() {
+    if t ${capacity[3]} -gt 3000; then
+      t $(volt_now) -gt $((capacity[3] + 50))
+    else t $(cat $battCapacity) -gt ${capacity[3]}; fi
+  }
+
   _gt_resume_cap() {
     if t ${capacity[2]} -gt 3000; then
       t $(volt_now) -gt ${capacity[2]}
@@ -55,7 +62,7 @@ if ! $init; then
 
 
   _le_resume_cap() {
-    if tt ${temperature[2]} "*r" && _lt_pause_cap; then
+    if [ "${ng_pause_reason-}" = temperature ] && tt ${temperature[2]} "*r" && _lt_pause_cap; then
       return 0
     elif t ${capacity[2]} -gt 3000; then
       t $(volt_now) -le ${capacity[2]}
@@ -80,12 +87,13 @@ if ! $init; then
 
 
   below_abs_lims() {
-    _lt_pause_cap && [ $(cat $temp) -lt $(( ${temperature[1]} * 10 )) ] && is_charging
+    ng_telemetry_valid && _lt_pause_cap && [ $(cat $temp) -lt $(( ${temperature[1]} * 10 )) ] && is_charging
   }
 
 
   exxit() {
     exitCode=$?
+    ng_engine_state stopped || :
     $persistLog && set +eu || set +eux
     rm $TMPDIR/.forceoff* 2>/dev/null
     trap - EXIT
@@ -102,7 +110,7 @@ if ! $init; then
     enable_charging
     if tt "$exitCode" "[127]"; then
       . $execDir/logf.sh
-      logf --export
+      (logf --export >/dev/null 2>&1) &
       notif "⚠️ Daemon stopped with exit code $exitCode!"
     fi
     cd /
@@ -123,21 +131,19 @@ if ! $init; then
     if ! not_charging; then
       isCharging=true
       # [auto mode] change the charging switch if charging has not been enabled by acc
-      if $chDisabledByAcc && [ -n "${chargingSwitch[0]-}" ] && ! tt "${chargingSwitch[*]}" "*--" \
-        && sleep ${loopDelay[1]} && { ! not_charging || { isCharging=false; false; }; }
-      then
-        if grep -q "^${chargingSwitch[*]}$" $TMPDIR/ch-switches; then
-          sed -i "\|^${chargingSwitch[*]}$|d" $TMPDIR/ch-switches
-          echo "${chargingSwitch[*]}" >> $TMPDIR/ch-switches
+      if $chDisabledByAcc && [ -n "${chargingSwitch[0]-}" ] && ! tt "${chargingSwitch[*]}" "*--"; then
+        ng_unexpected_charge=$(( ${ng_unexpected_charge:-0} + 1 ))
+        if [ "$ng_unexpected_charge" -ge 3 ]; then
+          if ng_save_switch ""; then chargingSwitch=(); else src_cfg; fi
+          ng_unexpected_charge=0
         fi
-        if ng_save_switch ""; then chargingSwitch=(); else src_cfg; fi
-      fi
+      else ng_unexpected_charge=0; fi
       # [auto mode] set charging switch
       if [ -z "${chargingSwitch[0]-}" ]; then
-        disable_charging
+        ng_disable_safe || return 7
         enable_charging
       fi
-    fi
+    else ng_unexpected_charge=0; fi
 
     [ $currentWorkaround0 = $currentWorkaround ] || exec $TMPDIR/accd --init
     (set +eu; eval '${loopCmd-}') || :
@@ -161,12 +167,7 @@ if ! $init; then
       # set chgStatusCode and capacitySync
       if [ -z "$chgStatusCode" ] && cmd_batt reset \
         && chgStatusCode=$(dumpsys battery 2>/dev/null | sed -n 's/^  status: //p')
-      then
-        if [ ! -f $TMPDIR/.dexopt.done ] && _uptime 900; then
-          start-stop-daemon -bx $TMPDIR/.bg-dexopt-job.sh -S -- 2>/dev/null || :
-          touch $TMPDIR/.dexopt.done
-        fi
-      fi
+      then :; fi
 
       # read charging current ctrl files (part 2) once
       $chCurrRead || {
@@ -237,29 +238,86 @@ if ! $init; then
   }
 
 
+  ng_cooldown_wait() {
+    local seconds=$1 elapsed=0 power=0
+    case "$seconds" in ''|*[!0-9]*) return 1;; esac
+    while [ "$elapsed" -lt "$seconds" ]; do
+      sleep 1
+      elapsed=$((elapsed + 1))
+      src_cfg
+      [ ! -f "$TMPDIR/.config-invalid" ] && ng_telemetry_valid || return 1
+      [ "$(cat "$temp")" -lt "$((temperature[3] * 10))" ] || { shutdown; return 1; }
+      if [ "$(cat "$temp")" -ge "$((temperature[1] * 10))" ]; then ng_pause_reason=temperature; return 1; fi
+      if ! _lt_pause_cap; then ng_pause_reason=limit; return 1; fi
+      power=0; ng_power_state || power=$?
+      [ "$power" != 1 ] || return 1
+    done
+  }
+
+  ng_disable_safe() {
+    local attempt=0
+    while [ "$attempt" -lt 3 ]; do
+      if [ "${1-}" = force ]; then
+        flip_sw off && return 0
+      else disable_charging && return 0; fi
+      attempt=$((attempt + 1))
+      [ "$attempt" = 3 ] || sleep 1
+    done
+    printf '%s control-failure attempts=3\n' "$(date +%s)" >> "$dataDir/logs/ng-recovery.log"
+    return 7
+  }
+
   ctrl_charging() {
 
     local count=0
 
     while :; do
 
+      [ ! -f "$execDir/disable" ] || { ng_engine_state disabled; return 14; }
+      if [ -f "$TMPDIR/.config-invalid" ]; then
+        ng_engine_state config-invalid
+        flip_sw off || :
+        sleep ${loopDelay[1]}; src_cfg; continue
+      fi
+      if ! ng_telemetry_valid; then
+        ng_engine_state sensor-wait
+        ng_pause_reason=sensor
+        # Do not test/cycle unknown controls with missing protective telemetry.
+        flip_sw off || :
+        if [ ! -f "$TMPDIR/.sensor-fault" ]; then
+          touch "$TMPDIR/.sensor-fault"
+          notif "Charging protection paused: battery capacity, temperature or voltage sensor unavailable."
+        fi
+        sleep ${loopDelay[1]}
+        src_cfg
+        continue
+      fi
+      ng_engine_state ready
+      rm -f "$TMPDIR/.sensor-fault"
+      _ge_pause_cap || ng_idle_retries=0
+
+      # Boot load can make net battery current negative even with input ON.
+      # A configured pause does not depend on first observing net charging.
+      if $offMid && [ -f "$TMPDIR/.minCapMax" ] && _lt_pause_cap && _gt_resume_cap \
+        && [ -n "${chargingSwitch[0]-}" ] && [ "$(cat "$temp")" -lt "$(( ${temperature[3]} * 10 ))" ]; then
+        ng_pause_reason=reboot
+        ng_disable_safe force || return 7
+        (set +eux; eval '${runCmdOnPause-}') || :
+        chDisabledByAcc=true
+        force_off
+        sleep ${loopDelay[1]}
+        rm "$TMPDIR/.minCapMax" 2>/dev/null || :
+        continue
+      fi
+
       if is_charging; then
         ng_observe Charging || :
-
-        # disable charging after a reboot, if min < capacity < max
-        if $offMid && [ -f $TMPDIR/.minCapMax ] && _lt_pause_cap && _gt_resume_cap; then
-          ng_pause_reason=reboot
-          disable_charging
-          force_off
-          sleep ${loopDelay[1]}
-          rm $TMPDIR/.minCapMax 2>/dev/null || :
-          continue
-        fi
 
         # disable charging under <conditions>
         if [ $(cat $temp) -ge $(( ${temperature[1]} * 10 )) ] || _ge_pause_cap; then
           if _ge_pause_cap; then ng_pause_reason=limit; else ng_pause_reason=temperature; fi
-          if ! $allowIdleAbovePcap && [ $(cat $battCapacity) -gt ${capacity[3]} ]; then
+          if ! $allowIdleAbovePcap && [ "${ng_idle_retries:-0}" -lt 2 ] && _gt_pause_margin; then
+            ng_idle_retries=$(( ${ng_idle_retries:-0} + 1 ))
             # if possible, avoid idle mode when capacity > pause_capacity
             (cat $config > $TMPDIR/.cfg
             config=$TMPDIR/.cfg
@@ -269,7 +327,7 @@ if ! $init; then
             force_off)
             chDisabledByAcc=true
           else
-            disable_charging
+            ng_disable_safe || return 7
             force_off
           fi
           ! ${resetBattStats[0]} || {
@@ -302,28 +360,30 @@ if ! $init; then
 
           if [ -z "${cooldownCurrent-}" ]; then
             cmd_batt set status $chgStatusCode
-            disable_charging
-            $cooldownCustom_ && sleep ${cooldownCustom[3]:-${loopDelay[1]}} \
-              || sleep ${cooldownRatio[1]:-${loopDelay[1]}}
+            ng_disable_safe || return 7
+            if $cooldownCustom_; then count=${cooldownCustom[3]:-${loopDelay[1]}};
+            else count=${cooldownRatio[1]:-${loopDelay[1]}}; fi
+            ng_cooldown_wait "$count" || break
             enable_charging
             $capacitySync || cmd_batt reset
             ! $cooldownCustom_ || cooldownRatio[0]=${cooldownCustom[2]:-${loopDelay[0]}}
             count=0
             while [ $count -lt ${cooldownRatio[0]:-${loopDelay[0]}} ]; do
-              sleep ${loopDelay[0]}
-              below_abs_lims && count=$(( count + ${loopDelay[0]} )) || break
+              ng_cooldown_wait 1 || break
+              below_abs_lims && count=$(( count + 1 )) || break
             done
           else
             (set_ch_curr ${cooldownCurrent:--} || :)
-            $cooldownCustom_ && sleep ${cooldownCustom[3]:-${loopDelay[1]}} \
-              || sleep ${cooldownRatio[1]:-${loopDelay[1]}}
+            if $cooldownCustom_; then count=${cooldownCustom[3]:-${loopDelay[1]}};
+            else count=${cooldownRatio[1]:-${loopDelay[1]}}; fi
+            ng_cooldown_wait "$count" || break
             [ -n "${maxChargingCurrent[0]-}" ] || (set_ch_curr - || :)
             apply_on_plug
             ! $cooldownCustom_ || cooldownRatio[0]=${cooldownCustom[2]:-${loopDelay[0]}}
             count=0
             while [ $count -lt ${cooldownRatio[0]:-${loopDelay[0]}} ]; do
-              sleep ${loopDelay[0]}
-              below_abs_lims && count=$(( count + ${loopDelay[0]} )) || break
+              ng_cooldown_wait 1 || break
+              below_abs_lims && count=$(( count + 1 )) || break
             done
           fi
         done
@@ -365,7 +425,11 @@ if ! $init; then
         fi
         sleep ${loopDelay[1]}
       fi
-      rm $TMPDIR/.minCapMax 2>/dev/null || :
+      # Keep an unresolved boot pause until a switch is selected or the level
+      # leaves the interval; observing discharge during boot is not resolution.
+      if ! $offMid || ! _lt_pause_cap || ! _gt_resume_cap; then
+        rm "$TMPDIR/.minCapMax" 2>/dev/null || :
+      fi
     done
   }
 
@@ -387,29 +451,21 @@ if ! $init; then
 
   set_dp() {
     src_cfg
-    while [ -z "${dischargePolarity-}" ] && [ $currFile != $TMPDIR/.dummy-curr ] && $battStatusWorkaround; do
-      (if online; then
-        notif "discharge_polarity is not set. Unplug and wait, or set it manually."
-        (while [ -z "${dischargePolarity-}" ] && online; do
-          sleep ${loopDelay[0]}
-          src_cfg
-          set +x
-        done)
-        src_cfg
-        [ -z "${dischargePolarity-}" ] || notif "discharge_polarity set successfully!"
-      else
-        (cmd="$TMPDIR/acca --set discharge_polarity="
-        curr=$(cat $currFile)
-        if [ $curr -gt 0 ]; then
-          eval "$cmd"+
-        elif [ $curr -lt 0 ]; then
-          eval "$cmd"-
-        fi)
-        notif "discharge_polarity set successfully!"
-      fi
-      set +x)
-      src_cfg
-    done
+    # Learn over successive loop samples; never wait for the user to unplug.
+    [ -z "${dischargePolarity-}" ] && ${currentIsBattery:-true} && $battStatusWorkaround \
+      && [ ! -f "$TMPDIR/.current-status-disabled" ] || return 0
+    local power=0 curr= sign=
+    ng_power_state || power=$?
+    if [ "$power" != 1 ]; then ng_dp_samples=0; return 0; fi
+    curr=$(ng_sensor_number "$currFile") || { ng_dp_samples=0; return 0; }
+    local threshold=$((idleThreshold * ${ampFactor_:-1000} / 1000))
+    [ "${curr#-}" -gt "$threshold" ] || { ng_dp_samples=0; return 0; }
+    [ "$curr" -gt 0 ] && sign=+ || sign=-
+    if [ "${ng_dp_sign-}" = "$sign" ]; then ng_dp_samples=$(( ${ng_dp_samples:-0} + 1 ));
+    else ng_dp_sign=$sign; ng_dp_samples=1; fi
+    [ "$ng_dp_samples" -ge 3 ] || return 0
+    "$TMPDIR/acca" --set "discharge_polarity=$sign" >/dev/null 2>&1 || return 0
+    ng_dp_samples=0
   }
 
 
@@ -444,6 +500,7 @@ if ! $init; then
             maskedCap=$(calc "($battCap - ${capacity[0]}) * 100 / (${capacity[3]} - ${capacity[0]})" | xargs printf %.f)
           fi
           [ $maskedCap -le 100 ] || maskedCap=100
+          [ $maskedCap -ge 0 ] || maskedCap=0
         fi
       }
 
@@ -536,6 +593,13 @@ if ! $init; then
 
 else
 
+  ng_init_finish() {
+    local code=$?
+    [ "$code" = 0 ] || ng_engine_state initialization-failed
+  }
+  trap ng_init_finish EXIT
+  [ ! -f "$execDir/disable" ] || { ng_engine_state disabled; exit 14; }
+  ng_engine_state initializing
 
   args="$(echo "$@" | sed -E 's/(--init|-i)//g')"
 
@@ -658,17 +722,26 @@ else
   rm -f "$TMPDIR/ch-switches_" "$TMPDIR/ch-switches__" "$TMPDIR/ch-switches.valid"
 
 
+  # Recover a killed probe's journal before any normal charging writes.
+  if [ -s "$TMPDIR/.test-snapshot" ] || [ -s "$TMPDIR/.test-master-snapshot" ]; then
+    . "$execDir/limit-control.sh"
+    . "$execDir/switch-test.sh"
+    for ng_test_snapshot in "$TMPDIR/.test-snapshot" "$TMPDIR/.test-master-snapshot"; do
+      ng_test_restore || { ng_engine_state control-failure; exit 7; }
+    done
+    if [ -s "$TMPDIR/.test-original-power" ]; then cp "$TMPDIR/.test-original-power" "$TMPDIR/.ng-input-paused"; fi
+    rm -f "$TMPDIR/.test-snapshot" "$TMPDIR/.test-master-snapshot" "$TMPDIR/.test-original-power" "$TMPDIR/.test-active" "$TMPDIR/.test-daemon-was-running"
+  fi
+
   # prepare default config help text and version code for oem-custom.sh and write-config.sh
   sed -n '/^# /,$p' $execDir/default-config.txt > $TMPDIR/.config-help
   sed -n '/^configVerCode=/s/.*=//p' $execDir/default-config.txt > $TMPDIR/.config-ver
 
 
+  ng_engine_state initializing
+
   # preprocess battery interface
   . $execDir/batt-interface.sh
-
-  # prepare bg-dexopt-job wrapper
-  printf "#!/system/bin/sh\n/system/bin/cmd package bg-dexopt-job < /dev/null > /dev/null 2>&1" > $TMPDIR/.bg-dexopt-job.sh
-  chmod 0755 $TMPDIR/.bg-dexopt-job.sh
 
   # start $id daemon
   rm $TMPDIR/.ghost-charging 2>/dev/null

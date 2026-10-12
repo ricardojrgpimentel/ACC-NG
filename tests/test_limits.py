@@ -5,6 +5,7 @@ import shlex
 import subprocess
 import tempfile
 import unittest
+from host_tools import run_host
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -33,6 +34,7 @@ print_curr_set() { :; }; print_curr_restored() { :; }
             misc = misc.replace('. \"$execDir/control-write.sh\"', (ROOT / 'install/control-write.sh').read_text())
             batt = (ROOT / 'install/batt-interface.sh').read_text().split('if ${init:-false}; then')[0]
             batt = batt.replace('. "$execDir/external-power.sh"', (ROOT / 'install/external-power.sh').read_text())
+            batt = batt.replace('. "$execDir/sensor-discovery.sh"', (ROOT / 'install/sensor-discovery.sh').read_text())
             for name in ['ctrl-files.sh', 'write-config.sh']:
                 script += 'printf %s ' + shlex.quote((ROOT / 'install' / name).read_text()) + ' > ' + name + '\n'
             script += misc + batt + '\nnot_charging() { return 1; }\n'
@@ -59,14 +61,7 @@ print_curr_set() { :; }; print_curr_restored() { :; }
                                     shlex.quote('rm -rf ' + shlex.quote(remote))],
                                    check=True, capture_output=True)
             else:
-                # macOS lacks flock/timeout and uses a different stat/sed CLI.
-                # Android runs the real BusyBox tools, including the lock tests.
-                shims = '''flock() { :; }; timeout() { shift; "$@"; }
-sed() { if [ "$1" = -i ] && [ "$(uname)" = Darwin ]; then shift; command sed -i '' "$@"; else command sed "$@"; fi; }
-stat() { if [ "$(uname)" = Darwin ]; then [ "$1" != -L ] || shift; if [ "$1" = -c ]; then shift 2; command stat -L -f %Lp "$1"; else command stat "$@"; fi; else command stat "$@"; fi; }
-'''
-                result = subprocess.run(['bash', '-c', shims + script], cwd=td,
-                                        capture_output=True, text=True, timeout=10)
+                result = run_host(script, cwd=td, timeout=15)
             self.assertEqual(0, result.returncode, result.stderr)
             return result.stdout.splitlines()
 

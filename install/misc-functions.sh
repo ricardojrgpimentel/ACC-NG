@@ -62,20 +62,24 @@ apply_on_plug() {
 
 
 at() {
-  local one=$1
-  local time=$(date +%H:%M)
-  local file=$TMPDIR/schedules/$one
+  local requested=$1 now=$(date +%H:%M) day=$(date +%Y%m%d) key= stamp=
   shift
-  if [ ! -f $file ] && [ ${one#0} = ${time#0} ]; then
-    mkdir -p ${file%/*}
-    echo "#!/system/bin/sh
-      sleep 60
-      rm $file
-      exit" > $file
-    chmod 0755 $file
-    start-stop-daemon -bx $file -S --
-    eval "$@"
+  case "$requested" in [0-2][0-9]:[0-5][0-9]|[0-9]:[0-5][0-9]) :;; *) return 11;; esac
+  [ "${requested#0}" = "${now#0}" ] || return 0
+  key=$(printf '%s' "$requested $*" | cksum | cut -d ' ' -f 1)
+  mkdir -p "$dataDir/schedules"
+  exec 5>"$dataDir/schedules/.lock" || return 1
+  flock -n 0 <&5 || return 0
+  stamp=$dataDir/schedules/$key
+  if [ "$(cat "$stamp" 2>/dev/null)" = "$day" ]; then
+    flock -u 0 <&5; exec 5>&-; return 0
   fi
+  printf '%s\n' "$day" > "$stamp"
+  flock -u 0 <&5; exec 5>&-
+  acc() { "$TMPDIR/acc" "$@"; }
+  acca() { "$TMPDIR/acca" "$@"; }
+  accd() { "$TMPDIR/accd" "$@"; }
+  eval "$*"
 }
 
 
@@ -87,13 +91,19 @@ calc() {
 cycle_switches() {
 
   local on=
-  local off=
+  local off= candidate= attempts=0 nci=3
+  local deadline=$(( $(date +%s) + 45 ))
+  local candidates=$(mktemp "$TMPDIR/.switch-cycle.XXXXXX") || return 7
+  cp "$TMPDIR/ch-switches" "$candidates" || { rm -f "$candidates"; return 7; }
 
-  while read -A chargingSwitch; do
+  while IFS= read -r candidate; do
+    [ "$attempts" -lt 16 ] && [ "$(date +%s)" -lt "$deadline" ] || break
+    attempts=$((attempts + 1))
+    set -f; chargingSwitch=($candidate); set +f
 
     [ ! -f ${chargingSwitch[0]:-//} ] || {
 
-      flip_sw $1 || :
+      if ! flip_sw "$1"; then flip_sw on 2>/dev/null || :; continue; fi
 
       if [ "$1" = on ]; then
         not_charging || break
@@ -112,7 +122,8 @@ cycle_switches() {
         fi
       fi
     }
-  done < $TMPDIR/ch-switches
+  done < "$candidates"
+  rm -f "$candidates"
 }
 
 
@@ -150,7 +161,7 @@ disable_charging() {
       cycle_switches_off
     fi
 
-    if $autoMode && ! not_charging; then
+    if ! not_charging; then
       return 7 # total failure
     fi
 
@@ -273,33 +284,50 @@ flip_sw() {
   flip=$1
   local on=
   local off=
-  local oppositeValue=
+  local oppositeValue= pausedNode= pausedOff=
 
   set -- ${chargingSwitch[@]-}
   [ -f ${1:-//} ] || return 2
   swValue=
+  ( while [ "$#" -ge 3 ]; do
+      [ -f "$1" ] && parse_value "$2" >/dev/null && parse_value "$3" >/dev/null || exit 2
+      shift 3
+    done
+    [ "$#" = 0 ] || [ "$*" = -- ]
+  ) || return 2
 
   while [ -f ${1:-//} ]; do
 
-    on="$(parse_value "$2")"
+    on="$(parse_value "$2")" || return 1
     if [ $3 = 3600mV ]; then
       off=$(cat $1)
       [ $off -lt 10000 ] && off=3600 || off=3600000
     else
-      off="$(parse_value "$3")"
+      off="$(parse_value "$3")" || return 1
     fi
 
+    if [ "$on" != "$off" ] && [ -z "$pausedNode" ]; then pausedNode=$1; pausedOff=$off; fi
     [ $flip = on ] && oppositeValue="$off" || { oppositeValue="$on"; cat $currFile > $curThen; }
     write \$$flip $1 || return 1
+    # Keep provenance even if a later alias in the group refuses its write.
+    if [ "$flip" = off ] && [ "$1" = "$pausedNode" ]; then
+      printf '%s::%s\n' "$pausedNode" "$pausedOff" > "$TMPDIR/.ng-input-paused.new" &&
+        mv "$TMPDIR/.ng-input-paused.new" "$TMPDIR/.ng-input-paused" || return 1
+    fi
 
     [ $# -lt 3 ] || shift 3
     [ $# -ge 3 ] || break
 
   done
+  if [ "$flip" = off ] && [ -n "$pausedNode" ]; then
+    printf '%s::%s\n' "$pausedNode" "$pausedOff" > "$TMPDIR/.ng-input-paused.new" &&
+      mv "$TMPDIR/.ng-input-paused.new" "$TMPDIR/.ng-input-paused"
+  elif [ "$flip" = on ]; then rm -f "$TMPDIR/.ng-input-paused"; fi
 }
 
 
 invalid_switch() {
+  case "${chargingSwitch[*]-}" in *\ --) return 7;; esac
   $isAccd || print_invalid_switch
   unset_switch
   cycle_switches_off
@@ -330,17 +358,25 @@ misc_stuff() {
 
 
 notif() {
-  su -lp ${2:-2000} -c "/system/bin/cmd notification post -S bigtext -t '🔋ACC' 'Tag' \"${1:-:)}\"" < /dev/null > /dev/null 2>&1 || :
+  [ "${ngNotifications-true}" = true ] || return 0
+  local message="[$(date +%H:%M:%S)] ${1:-:)}" uid=${2:-2000} quoted=
+  case "$uid" in ''|*[!0-9]*) return 11;; esac
+  quoted=$(printf '%s' "$message" | awk '{gsub(/\047/, "\047\042\047\042\047"); printf "%s%s", (NR > 1 ? "\n" : ""), $0}')
+  (exec 4>&-; timeout 3 su -lp "$uid" -c "/system/bin/cmd notification post -S bigtext -t 'ACC-NG' 'acc-ng-cli' '$quoted'" \
+    </dev/null >/dev/null 2>&1 || :) &
+  return 0
 }
 
 
 parse_value() {
-  if [ -f "$1" ]; then
-    chmod a+r $1 2>/dev/null || :
-    cat $1
-  else
-    echo "$1" | sed 's/::/ /g'
-  fi
+  case "$1" in
+    */*)
+      [ -f "$1" ] && [ -r "$1" ] || return 1
+      local value=$(cat "$1")
+      [ -n "$value" ] || return 1
+      printf '%s\n' "$value";;
+    *) printf '%s\n' "$1" | sed 's/::/ /g';;
+  esac
 }
 
 
@@ -357,8 +393,8 @@ print_wait_plug() {
 
 
 src_cfg() {
-  /system/bin/sh -n $config 2>/dev/null || cat $execDir/default-config.txt > $config
-  . $config
+  . "$execDir/config-transaction.sh"
+  ng_load_config
 }
 
 

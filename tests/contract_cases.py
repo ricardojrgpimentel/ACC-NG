@@ -7,6 +7,7 @@ from pathlib import Path
 import shlex
 import subprocess
 import tempfile
+from host_tools import run_host
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -27,8 +28,7 @@ def run(commands):
     serial = os.environ.get('ACC_TEST_ADB_SERIAL')
     with tempfile.TemporaryDirectory(prefix='acc-contract-') as td:
         if not serial:
-            result = subprocess.run(['bash', '-c', script], cwd=td, capture_output=True,
-                                    text=True, timeout=15)
+            result = run_host(script, cwd=td, timeout=15)
         else:
             remote = subprocess.check_output(['adb', '-s', serial, 'shell',
                 'mktemp -d /data/local/tmp/acc-contract.XXXXXX'], text=True).strip()
@@ -93,12 +93,13 @@ def collect():
     fixtures['version']['current'] = run('accVer=' + shlex.quote(props['version']) +
         '; accVerCode=' + shlex.quote(props['versionCode']) + '\n' + version_body)
     fixtures['sources'] = {name: hashlib.sha256((ROOT / name).read_bytes()).hexdigest()
-        for name in ['install/acca.sh', 'install/acc.sh', 'install/batt-info.sh',
+        for name in ['install.sh', 'install/uninstall.sh', 'install-tarball.sh', 'install-online.sh',
+                     'install/acca.sh', 'install/acc.sh', 'install/batt-info.sh',
                      'install/batt-interface.sh', 'install/print-config.sh',
                      'install/default-config.txt', 'install/write-config.sh', 'install/set-prop.sh',
                      'install/external-power.sh', 'install/control-discovery.sh', 'install/ng-power-limits.sh',
                      'install/limit-control.sh', 'install/control-write.sh', 'install/set-ch-curr.sh',
-                     'install/set-ch-volt.sh', 'install/accd.sh', 'install/ng-events.sh', 'install/misc-functions.sh']}
+                     'install/set-ch-volt.sh', 'install/accd.sh', 'install/ng-events.sh', 'install/misc-functions.sh', 'install/sensor-discovery.sh', 'install/ctrl-files.sh', 'install/oem-custom.sh', 'install/switch-test.sh', 'install/config-transaction.sh', 'install/engine-state.sh', 'install/service.sh', 'install/diagnostics.sh', 'install/logf.sh', 'install/rollback.sh', 'install/setup-busybox.sh', 'install/archive-check.sh']}
     fixtures['config']['default'] = config_case()
     fixtures['config']['profile'] = config_case('''
 ngNotifications=false; ngNotificationLanguage=pt-PT
@@ -129,17 +130,22 @@ ngNotifications=false; ngNotificationLanguage=pt
     for name, lock_result in [('running', 1), ('stopped', 0)]:
         fixtures['daemon'][name] = run(f'flock() {{ return {lock_result}; }}\n' +
             function('acca.sh', 'daemon_ctrl') + '\ndaemon_ctrl')
-    # Execute ON/OFF result reporting with hardware operations replaced by counters.
-    for name, idle, failed in [('working', False, False), ('idle', True, False), ('failed', False, True)]:
-        script = '''mkdir -p battery
-flip_sw() { :; }; print_switch_works() { echo 'Switch works'; }
-switch_fails() { echo 'Switch failed'; return 10; }
-n=0
-'''
-        script += f'not_charging() {{ n=$((n + 1)); _status={"Idle" if idle else "Discharging"}; '
-        script += ('return 1;' if failed else '[ "$n" -eq 1 ];') + ' }\n'
-        # This function deliberately propagates 15 for working battery idle.
-        script += function('acc.sh', 'test_charging_switch') + '\ntest_charging_switch battery/charging_enabled 1 0'
+    # Execute the bounded production probe with file-backed switch/status data.
+    for name, status in [('working', 'Discharging'), ('idle', 'Idle'), ('failed', 'Charging')]:
+        script = source('switch-test.sh') + '\n' + function('misc-functions.sh', 'parse_value') + """
+mkdir battery; echo 1 > battery/charging_enabled
+ng_test_snapshot=$PWD/snapshot; ng_test_deadline=45
+echo 300 > temp; temp=$PWD/temp; temperature=(35 50 40r 55)
+ng_telemetry_valid() { return 0; }
+ng_test_time() { echo 0; }; sleep() { :; }
+write_control() { printf '%s\\n' "$1" > "$2"; }
+print_switch_works() { echo 'Switch works'; }
+"""
+        script += 'offStatus=' + shlex.quote(status) + """
+flip_sw() { if [ "$1" = off ]; then _fixtureStatus=$offStatus; else _fixtureStatus=Charging; fi; }
+not_charging() { _status=$_fixtureStatus; [ "$_status" != Charging ]; }
+ng_test_switch battery/charging_enabled 1 0
+"""
         fixtures['switch'][name] = run(script)
     fixtures['switch']['list'] = run("printf '%s\\n' 'battery/charging_enabled 1 0' 'battery/batt_slate_mode 0 1 --' > ch-switches\n" +
         function('set-prop.sh', 'set_prop') + '\nset_prop s:')

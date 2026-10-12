@@ -11,7 +11,7 @@ class FrontendControlsTests(unittest.TestCase):
     def frontend(self):
         script = ''
         for name in ['limit-control.sh', 'control-write.sh', 'control-discovery.sh',
-                     'ng-power-limits.sh', 'external-power.sh', 'set-ch-curr.sh',
+                     'ng-power-limits.sh', 'config-transaction.sh', 'external-power.sh', 'sensor-discovery.sh', 'set-ch-curr.sh',
                      'set-ch-volt.sh', 'batt-interface.sh', 'default-config.txt']:
             script += 'printf %s ' + shlex.quote(source(name)) + f' > {name}\n'
         text = source('acca.sh')
@@ -91,6 +91,7 @@ parse_switches ch-switches log-input
     def test_discovery_switch_save_preserves_latest_settings_and_manual_choice(self):
         self.assertEqual(['capacity=(5 50 70 80 false false)',
                           'maxChargingCurrent=(500)', 'MANUAL_PRESERVED'], self.run_shell(self.frontend() + '''
+ng_config_locked=true
 . "$config"; capacity=(5 50 70 80 false false); maxChargingCurrent=(500)
 . "$execDir/write-config.sh"
 # The daemon retains an older in-memory profile.

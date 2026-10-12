@@ -1,6 +1,8 @@
 . "$execDir/external-power.sh"
+. "$execDir/sensor-discovery.sh"
 
 idle_discharging() {
+  case "$curNow" in ''|*[!0-9-]*|-) return 1;; esac
   [ ${curNow#-} -gt $idleThreshold ] || {
     _status=Idle
     return 0
@@ -27,9 +29,10 @@ not_charging() {
 
   tt "${chargingSwitch[$*]-}" "*\ --" || battStatusOverride=
 
-  ! tt "$currFile" "*/current_now" && battStatusWorkaround=false || {
-    [ ${ampFactor:-$ampFactor_} -eq 1000 ] || idleThreshold=${idleThreshold}000
-  }
+  if ! ${currentIsBattery:-true} || [ -f "$TMPDIR/.current-status-disabled" ] || ! tt "$currFile" "*/current_now"; then battStatusWorkaround=false
+  else
+    [ ${ampFactor_:-${ampFactor:-1000}} -eq 1000 ] || idleThreshold=${idleThreshold}000
+  fi
 
   if [ -z "${battStatusOverride-}" ] && [ -n "$switch" ]; then
     for i in $(seq $nci); do
@@ -63,7 +66,8 @@ read_status() {
   case "$status" in
     Charging|Discharging) printf %s $status;;
     Not?charging) online && printf Idle || printf Discharging;;
-    *) printf Discharging;;
+    Full|Idle) printf Idle;;
+    *) printf Unknown;;
   esac
 }
 
@@ -103,12 +107,13 @@ status() {
 
   if [ -n "${battStatusOverride-}" ]; then
     if tt "$battStatusOverride" "Discharging|Idle"; then
-      [ $(cat ${chargingSwitch[0]}) != ${chargingSwitch[2]} ] || _status=$battStatusOverride
+      local offValue=$(parse_value "${chargingSwitch[2]}") || return 1
+      [ "$(cat "${chargingSwitch[0]}")" != "$offValue" ] || _status=$battStatusOverride
     else
       _status=$(set -eu; eval '$battStatusOverride') || :
     fi
   elif $battStatusWorkaround; then
-    [ $_status = Idle ] || idle_discharging
+    idle_discharging || :
   fi
 
   [ -z "${exitCode_-}" ] || echo -e "  switch: ${switch:--} (${swValue:-N/A})\tcurrent: $(calc $curNow \* 1000 / ${ampFactor:-$ampFactor_} | xargs printf %.f)mA ($_status)"
@@ -122,58 +127,17 @@ status() {
 
 
 volt_now() {
-  grep -o '^....' $voltNow
+  local value=$(ng_sensor_number "$voltNow") || return 1
+  local factor=${voltFactor:-1000}
+  [ "$factor" = 1000 ] || [ "$factor" = 1000000 ] || return 1
+  if [ "$factor" = 1000000 ]; then echo "$((value / 1000))"; else echo "$value"; fi
 }
 
 
 if ${init:-false}; then
 
-  for batt in maxfg/capacity */capacity; do
-    if [ -f ${batt%/*}/status ] && [ -n "$(cat ${batt%/*}/uevent 2>/dev/null || :)" ]; then
-      batt=${batt%/*}
-      break
-    fi
-  done
-
-  case $batt in
-    */capacity) exit 1;;
-  esac
-
-  for battStatus in sm????_bms/status $batt/status; do
-    [ ! -f $battStatus ] || break
-  done
-
-
-  echo 250 > $TMPDIR/.dummy-temp
-
-  for temp in $batt/temp $batt/batt_temp bms/temp $TMPDIR/.dummy-temp; do
-    [ ! -f $temp ] || break
-  done
-
-
-  echo 0 > $TMPDIR/.dummy-curr
-
-  for currFile in $batt/current_now bms/current_now battery/?attery?verage?urrent \
-    /sys/devices/platform/battery/power_supply/battery/?attery?verage?urrent $TMPDIR/.dummy-curr
-  do
-    [ ! -f $currFile ] || break
-  done
-
-
-  voltNow=$batt/voltage_now
-  [ -f $voltNow ] || voltNow=$batt/batt_vol
-  [ -f $voltNow ] || {
-    echo 3900 > $TMPDIR/.voltage_now
-    voltNow=$TMPDIR/.voltage_now
-  }
-
-
-  ampFactor=$(sed -n 's/^ampFactor=//p' $dataDir/config.txt 2>/dev/null || :)
-  ampFactor_=${ampFactor:-1000}
-
-  if [ $ampFactor_ -eq 1000000 ] || [ $(sed s/-// $currFile) -ge 16000 ]; then
-    ampFactor_=1000000
-  fi
+  ampFactor=$(sed -n 's/^ampFactor=//p' "$dataDir/config.txt" 2>/dev/null || :)
+  ng_discover_battery || exit 1
 
   curThen=$TMPDIR/.curr
   rm $curThen 2>/dev/null || :
@@ -181,12 +145,17 @@ if ${init:-false}; then
 
   echo "ampFactor_=$ampFactor_
 batt=$batt
-battCapacity=$batt/capacity
+battCapacity=$battCapacity
 battStatus=$battStatus
 currFile=$currFile
 curThen=$curThen
 temp=$temp
-voltNow=$voltNow" > $TMPDIR/.batt-interface.sh
+voltNow=$voltNow
+voltFactor=$voltFactor
+hasCurrentSensor=$hasCurrentSensor
+currentIsBattery=$currentIsBattery
+hasTemperatureSensor=$hasTemperatureSensor
+hasVoltageSensor=$hasVoltageSensor" > $TMPDIR/.batt-interface.sh
 
   init=false
 

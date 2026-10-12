@@ -107,3 +107,144 @@ cooldown. The original config was restored. The app's I3 record identifies the
 installed runtime and exact test scope, including an inherited staging cleanup
 bug still open in R5.3. Actual limits/reset, OEM policy and the full rollback
 matrix remain pending before distribution.
+
+
+## I4 — preserve installer staging during upgrade/recovery
+
+11 October 2026. Unreleased candidate **v1.0.7-ng (202610117)** over
+`1e8291b`. API 1/schema 202310160 and charging behaviour remain unchanged.
+
+R5.3 (partial): remove the inherited `/data/local/tmp/acc[-_]*` glob from
+`install/uninstall.sh`. The uninstaller removes installed module paths;
+installation sources and unrelated staging belong to their callers. Tarball
+and online installers still remove their extracted source after installation
+or recovery. No upstream commit is claimed as fully ported by this NG fix.
+
+Six regression tests execute nine scenarios using complete installer scripts
+with filesystem paths redirected below a temporary root. They cover hyphen,
+underscore and nested staging, clean installation, full uninstall, tarball
+cleanup, and injected copy failure (exit 42). Recovery restores the previous
+module/configuration, starts its fixture service once and preserves the
+original failure code before caller cleanup. Process/root/platform commands
+and the service are stubbed; these fixtures do not install a live module or
+exercise charging control. The pre-fix source fails all six regression tests.
+
+Installer source hashes now accompany the existing runtime hashes in shared
+frontend fixtures. R5.3 still needs explicit rollback CLI, broader cleanup and
+root-manager validation; R2.2/R2.3 and the full R7 matrix remain pending.
+
+
+Validation: 79 engine tests on host (77 passed, two Android-only skipped),
+79 passed with the Android fixture runners on Samsung SM-G975F, and all 35
+runtime/installer scripts passed Android shell syntax. Shared fixture export
+checks passed. These results do not certify live upgrade or explicit rollback.
+
+
+## I5 — R2 OEM switches and physical sensor discovery (working increment)
+
+11 October 2026. Code integrated on the roadmap branch; the installed/bundled
+candidate remains I4 until the remaining core groups receive joint packaging.
+No new source or release is published. API 1/schema 202310160 remain.
+
+R2.2: adapt final ASUS, FP5/qcom, charger/bypass and OEM switches, deduplicate
+Oplus, restrict board rules to exact MSM8916/MSM8937/CRO-L03/MSM8953/MT6795.
+Do not modify the shipped catalogue at runtime or overwrite manual switches.
+Wireless boost, forced fast charge and Oplus cool_down remain explicit
+manual/plugin experiments rather than automatic candidates.
+
+R2.3: split Nexus 10 status/capacity, missing uevent, battery/BMS/alternative
+current and temperature nodes. Validate reads and units; prefer battery current
+and identify charger-input fallback separately (never battery idle/calibration).
+Report unavailable measurements without fake 0 A, 25 C or 3900 mV readings.
+The loop pauses the selected control with a diagnostic if protective telemetry
+is lost; it does not probe controls or shut down from a malformed read.
+The additive --sensor-status protocol lets frontend diagnostics use the actual
+selected source/role/scale. Legacy engine diagnostics retain their old scale
+precedence. Microvolt conversion avoids Android mksh 32-bit multiplication.
+
+Origins adapted: 43ae881/939ed3f/f237b0b/d3752b1/705b762/289017b/a2177e8;
+only the bypass switch part of 09e38a4 is included. Existing current/status and
+thermal semantics remain for R3; legacy schema and manual calibration remain.
+12 sensor scenarios and the full 91-case suite passed with Android fixture
+runners (hardware reads/writes simulated). App validation is recorded alongside
+the final joint bundle; physical OEM certification on other devices is pending.
+
+## I6 — bounded probes, configuration transactions and lifecycle
+
+Working candidate v1.0.8-ng (202610118), 11 October 2026, API 1 and schema
+202310160. R2 discovery is combined with R3 bounded probes: 45 second total
+budget, three consistent samples, exclusive test/daemon locks, exact control
+journals, TERM cleanup and startup recovery after a killed probe. Manual
+switches survive missing nodes; automatic candidate lists are snapshotted and
+bounded, failed recovery returns 7. Polarity is learned over three successive
+physical discharge samples without waiting for unplug. Thermal `r` only relaxes
+thermal pauses, idle retries stop after two attempts, and cooldown waits inspect
+sensors/unplug/shutdown every second.
+
+R4 writers share the configuration mutex and commit a syntax-checked file by
+rename, preserve extension assignments, escape hook quotes, retain last-good
+and invalid sources, reject incompatible units and malformed values. Partial
+raw-schema import accepts CRLF and replaces scripts by name. Scheduler stamps
+are per command and calendar day, including midnight, preserving app DJS.
+
+R5 exposes boot-aware engine-state without delaying status calls, respects
+disable during bounded boot waiting and normal operation, records explicit
+root manager flags and supports APatch BusyBox independently of detection.
+Official manager references: https://kernelsu.org/guide/module.html and
+https://apatch.dev/apm-guide.html. These document environment flags and BusyBox
+paths; physical KSU/APatch certification remains pending.
+
+Tarball/online installation uses private extraction directories and validates
+one NG root, regular files/directories, paths, member count and total size.
+Warnings from Android tar also reject unsafe absolute paths. Online downloads
+require HTTPS, verified TLS, HTTP success and time/size limits. Rollback selects
+a dated NG snapshot, validates it, atomically replaces the module and keeps the
+current profile plus a backup of the replaced module. Diagnostic exports copy
+bounded tails under an exclusive lock and include sensors, readiness, limits
+and the latest switch result; failure export is asynchronous in the daemon.
+
+Existing R6 safety: physical capacity remains the control/shutdown source;
+presentation masks clamp to 0–100. Temporary `acc -f` uses a copy of the profile,
+keeps OEM current/voltage and thermal limits, and returns to the regular daemon
+on confirmed unplug. New optional idle_apps, Encore and percentage-current UI
+remain outside this candidate, as permitted by R6's optional gate.
+
+Host: 133 behavioral cases (131 passed, two Android-only cases skipped). The shared
+source contract covers the added runtime helpers and both installers. Android,
+app and physical candidate evidence is maintained in AccA-NG's
+`docs/acc-ng-validation.md`; this source record does not certify unavailable
+OEM devices/root managers or unsupported limit nodes.
+
+Final compatibility audit also covers CLI `-s file` partial imports, `-c a`
+case-insensitive named scripts (including names containing spaces), NG command
+wrappers in schedules, comma-separated information/log filters, backup-version
+readback and working-switch/support reports. Configuration validation does not
+execute scripts; writer reload excludes script lines. A failing user hook does
+not erase an otherwise valid profile. Unrelated dexopt jobs were removed from
+the charging loop. Kernel/logcat capture is bounded in diagnostic exports.
+
+### I6 Samsung input-pause correction
+
+The Samsung `batt_slate_mode` OFF value also clears the external supply's
+`online` bit while the cable remains attached. A readback marker for our own
+OFF write now keeps that state unknown instead of asserting unplug. This
+prevents false unplug/calibration events. A switch probe snapshots and briefly
+enables the configured input control to prove external power, under the same
+thermal checks and overall deadline. A separate durable journal restores the
+original paused input after all probes, cancellation or daemon recovery.
+The shared frontend helper resolves relative control paths against its supply
+root. Native Not Charging readings still require battery-current confirmation
+before being reported as idle.
+
+The final CLI audit puts full config reset and script deletion under the same
+atomic replacement/backup mutex; reset closes the writer lock before starting
+a daemon so that the restarted process cannot inherit and retain it.
+
+A physical locked-boot trial found that net discharge during boot could clear
+the offMid request before applying the configured switch. The controller now
+applies a known boot pause before requiring net charging, keeps an unresolved
+request until automatic selection or leaving the interval, and retains the
+shutdown-temperature guard. Behavioral fixtures cover both paths.
+The boot-pause path forces the configured OFF write with bounded retries;
+regular disable logic can treat net discharge as already stopped and skip it.
+The regression executes the real retry helper so that a skipped write fails.

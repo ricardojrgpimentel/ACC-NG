@@ -1,3 +1,33 @@
+# v1.0.8-ng (roadmap core candidate, unreleased)
+
+- Discover split OEM sensors without fabricated readings; report current source
+  and distinguish battery current from input current.
+- Keep OEM input-cut readings unknown while our own pause is active; prove
+  external power before probes and restore the original paused control.
+- Bound switch tests, restore controls after cancellation, preserve manual
+  policy and learn discharge polarity without blocking the charging loop.
+- Keep thermal/capacity pause reasons separate and interrupt cooldown promptly.
+- Save configuration atomically, retain recoverable backups and extension keys,
+  import partial CRLF profiles/scripts and avoid duplicate daily schedules.
+- Apply configured offMid boot pauses even while boot load causes net discharge.
+- Expose boot readiness, honor disable during initialization, record root manager
+  flags and support APatch's BusyBox path.
+- Validate HTTPS downloads and NG archives, isolate extraction cleanup, restore
+  dated NG snapshots with the current profile and export bounded diagnostics.
+- Preserve API 1/schema and protect temporary force-charge profiles with existing
+  thermal/OEM limits. New optional integrations remain outside this candidate.
+
+# v1.0.7-ng (local candidate, unreleased)
+
+- Preserve installation sources and unrelated files in /data/local/tmp during
+  upgrade, recovery and uninstall; remove inherited acc[-_]* staging cleanup.
+  Tarball/online callers continue to clean their own extracted source.
+- Exercise complete installation/cleanup and failed-copy recovery flows in
+  isolated host/Android filesystems; preserve the old module, configuration
+  and original failure status. Include installer hashes in bundle provenance.
+- Preserve API 1/schema 202310160 and existing charging behaviour. Full R5/R7
+  validation and publication remain pending.
+
 # v1.0.6-ng (local candidate, unreleased)
 
 - Discover current/voltage controls without chmod or waiting for a charger;

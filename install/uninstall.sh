@@ -68,12 +68,14 @@ pgrep -f "/($id|${id}a) (-|--)[det]|/${id}d" > /dev/null && { #legacy
   pkill -KILL -f "/($id|${id}a) (-|--)[det]|/${id}d"
 }
 
+# Temporary installation sources belong to their callers (tarball/online/app).
+# A name-based /data/local/tmp cleanup can delete an active upgrade and the
+# uninstall script needed by its recovery trap. Only remove installed paths.
 # uninstall $id ###
 rm -rf /data/adb/$domain/$id \
   /data/adb/modules/$id \
   /data/adb/service.d/${id}-*.sh \
-  /data/data/mattecarra.accapp/files/$id \
-  /data/local/tmp/${id}[-_]*
+  /data/data/mattecarra.accapp/files/$id
 
 [ "${1:-}" = install ] || rm -rf /data/adb/$domain/${id}-data
 rmdir /data/adb/$domain

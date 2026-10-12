@@ -3,7 +3,7 @@
 ng_control_allowed() {
   local path=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
   case "$path" in
-    *parallel*|*/store_mode|*bq[0-9]*/current_max|*/uevent|*/current_now|*/voltage_now|*/capacity) return 1;;
+    *parallel*|*/current_cmd|*/store_mode|*bq[0-9]*/current_max|*/uevent|*/current_now|*/voltage_now|*/capacity) return 1;;
   esac
   [ -f "$1" ]
 }
