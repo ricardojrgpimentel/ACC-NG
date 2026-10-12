@@ -14,3 +14,11 @@ the host results do not replace that check or physical hardware validation.
 
 The historical preference-write test always runs on the host, even when the
 Android runner is selected. It now uses the same portable host tooling.
+
+`test_controller_protections.py` runs the actual controller and protective
+helpers against synthetic capacity/voltage/temperature files. It checks charge
+cooldown interruption and OFF effects, invalid-data handling, physical shutdown
+boundaries and reconnect cancellation, three-attempt control failures and the
+two-cycle idle reselection budget. Platform shutdown/control operations are
+stubbed; these cases never read or write live sensors. They replace the former
+assertions that only searched for control-path source strings.
