@@ -2,10 +2,10 @@
   "version": {
     "current": {
       "code": 0,
-      "output": "v1.0.8-ng (202610118)"
+      "output": "v1.0.9-ng (202610129)"
     }
   },
-  "module": "id=acc\ndomain=vr25\nname=Advanced Charging Controller NG (ACC-NG)\nversion=v1.0.8-ng\nversionCode=202610118\nauthor=Ricardo Pimentel; based on ACC by VR25\ndescription=Charging controller for AccA-NG. Applies charging limits and temperature settings configured in the app and keeps control active in the background.\nupdateJson=https://raw.githubusercontent.com/ricardojrgpimentel/ACC-NG/main/module.json\nngApiVersion=1\nupstreamVersionCode=202310160\nngConfigSchema=202310160\nngCapabilities=engine-state,atomic-config,partial-import,bounded-switch-test,info-key-value-si,capacity-six,resume-temperature,resume-temperature-override,manual-discharge-polarity,ng-notifications,power-limits-status,sensor-status",
+  "module": "id=acc\ndomain=vr25\nname=Advanced Charging Controller NG (ACC-NG)\nversion=v1.0.9-ng\nversionCode=202610129\nauthor=Ricardo Pimentel; based on ACC by VR25\ndescription=Charging controller for AccA-NG. Applies charging limits and temperature settings configured in the app and keeps control active in the background.\nupdateJson=https://raw.githubusercontent.com/ricardojrgpimentel/ACC-NG/main/module.json\nngApiVersion=1\nupstreamVersionCode=202310160\nngConfigSchema=202310160\nngCapabilities=engine-state,atomic-config,partial-import,bounded-switch-test,info-key-value-si,capacity-six,resume-temperature,resume-temperature-override,manual-discharge-polarity,ng-notifications,power-limits-status,sensor-status",
   "config": {
     "default": {
       "code": 0,
@@ -110,7 +110,7 @@
     "install/acca.sh": "77069460b46276db2260796c9623986f81f248b95bfd043258dcc06e2ff3c145",
     "install/acc.sh": "af5b8b2021fa568e4ade197f9d61335622826df5c120949f0b83f3591072e646",
     "install/batt-info.sh": "9876ca47d1a6cd2d131221e1c61d5d6f2105c71f87362340f6603c4d1db5db87",
-    "install/batt-interface.sh": "4355ad4f7e7238412f7febd9b9dbfcc903a6ffd1b07cf710b8da8e36c5097ecb",
+    "install/batt-interface.sh": "8ae3bb0c0f4c1dbc2319df7cb2df2d8b20659cc368fbd385c1b02b340638df10",
     "install/print-config.sh": "00e297b859ca809819f36ad7a4a88b189d7df950d2da2be14b286b9a508e7cba",
     "install/default-config.txt": "c92d7b9ab43678eb311d2de4b53a0342d8df024801387cfa46a86666f97fc12e",
     "install/write-config.sh": "a8320ae6711c6c4a6c9bf93345edc4099e93b76165cf730b7815643c4431d854",
@@ -122,7 +122,7 @@
     "install/control-write.sh": "335871d35819a787c536e87d47c6b96658f59ada2bcaa3aadebdd4d899e40b27",
     "install/set-ch-curr.sh": "a27a3388a2c75835c88ea4171c0d98fe84a543a290a7369a0181e80311076a95",
     "install/set-ch-volt.sh": "0457307c69d1ee965eed9f73824028c7a732edb58311a9e1f285392344633a36",
-    "install/accd.sh": "ee7047ce112b92c7bd09fa8ee552b6da2b0005f742dc03b45b61121650f7b14e",
+    "install/accd.sh": "d3cd41512d05d678201e869a04146ed131b320c5401375bfe8015ca17cc53e61",
     "install/ng-events.sh": "835849d54a8821d3796b0a67c7314faa9e5622aefefd30491ecf1faab9a94204",
     "install/misc-functions.sh": "7e70dfb463b5b11264ca74d2dc951f61ff28ce93b7917182b30ecffa6b6e5b23",
     "install/sensor-discovery.sh": "f593ca2ecb4b15c08ad487a5c9781a520366ab170958fbb179ccc59ae1bddd32",

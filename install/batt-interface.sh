@@ -26,6 +26,15 @@ not_charging() {
   local idleThreshold=$idleThreshold
   local battStatusOverride="${battStatusOverride-}"
   local battStatusWorkaround=${battStatusWorkaround-}
+  local power=0
+
+  # Before polarity is learned, relative-current fallback can classify two
+  # negative samples as charging. Confirmed absent input is authoritative.
+  ng_power_state || power=$?
+  if [ "$power" = 1 ]; then
+    _status=Discharging
+    return 0
+  fi
 
   tt "${chargingSwitch[$*]-}" "*\ --" || battStatusOverride=
 
@@ -36,6 +45,16 @@ not_charging() {
 
   if [ -z "${battStatusOverride-}" ] && [ -n "$switch" ]; then
     for i in $(seq $nci); do
+      if [ "$switch" = on ]; then
+        power=0; ng_power_state || power=$?
+        # A charger removed during an ON check cannot satisfy that check.
+        # Report discharge despite a lagging kernel status; unknown OEM input
+        # pauses still wait for the selected control to resume.
+        if [ "$power" = 1 ]; then
+          _status=Discharging
+          return 0
+        fi
+      fi
       if [ "$switch" = off ]; then
         ! status ${1-} || {
           sleep ${loopDelay[0]}

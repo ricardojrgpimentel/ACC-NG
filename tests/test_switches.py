@@ -190,6 +190,112 @@ dischargePolarity=+; set_dp; test "$(wc -l < learnt)" -eq 1
 ''')
         self.assertEqual({'code': 0, 'output': '--set discharge_polarity=-'}, result)
 
+    def unplug_loop(self, power):
+        script = source('default-config.txt') + source('sensor-discovery.sh') + '\n'
+        script += ''.join(daemon_function(name) + '\n' for name in [
+            'set_dp', 'is_charging', 'ctrl_charging', '_ge_pause_cap',
+            '_lt_pause_cap', '_gt_resume_cap', '_le_resume_cap', 'temp_ok'])
+        script += function('misc-functions.sh', 'tt') + '''
+execDir=$PWD; log=$PWD/daemon.log; touch "$log"
+echo 60 > cap; battCapacity=$PWD/cap; capacity=(5 101 65 70 false false)
+echo 300 > temp; temp=$PWD/temp; temperature=(35 50 45 55)
+echo -250 > current; currFile=$PWD/current; ampFactor_=1000
+currentIsBattery=true; battStatusWorkaround=true; dischargePolarity=
+chargingSwitch=(battery/enable 1 0); currentWorkaround0=false
+isCharging=false; cooldown=false; chDisabledByAcc=false; restrictCurr=false
+chgStatusCode=; dischgStatusCode=; ng_pause_reason=; shutdownWarnings=false
+resetBattStats=(false false false); resetBattStatsOnUnplug=false
+loopDelay=(3 9); ticks=0; fixture_clock=0; fixture_writes=0
+src_cfg() { :; }; ng_telemetry_valid() { return 0; }
+t() { test "$@"; }
+ng_engine_state() { :; }; ng_observe() { :; }; sync_capacity() { :; }
+not_charging() { _status=Discharging; return 0; }
+cmd_batt() { return 1; }; _uptime() { return 1; }
+enable_charging() {
+  fixture_writes=$((fixture_writes + 1))
+  # An ON verification while physically unplugged spends 14 x 3s waiting.
+  fixture_clock=$((fixture_clock + 42))
+}
+sleep() {
+  fixture_clock=$((fixture_clock + $1)); ticks=$((ticks + 1))
+  if [ "$ticks" = 3 ]; then
+    [ ! -f learnt ] || cat learnt
+    printf 'clock=%s\nwrites=%s\n' "$fixture_clock" "$fixture_writes"
+    exit 0
+  fi
+}
+cat > acca <<'SH'
+#!/system/bin/sh
+printf '%s\n' "$*" >> learnt
+SH
+chmod +x acca
+'''
+        if not __import__('os').environ.get('ACC_TEST_ADB_SERIAL'):
+            script += "sed -i '1c#!/bin/sh' acca\n"
+        return run(script + 'ng_power_state() { return ' + str(power) + '; }; ctrl_charging\n')
+
+    def test_unplug_loop_calibrates_without_waiting_for_unpowered_switch(self):
+        self.assertEqual({'code': 0, 'output': '--set discharge_polarity=-\nclock=27\nwrites=0'},
+                         self.unplug_loop(1))
+
+    def test_connected_or_unknown_input_still_allows_resume(self):
+        for power in [0, 2]:
+            with self.subTest(power=power):
+                result = self.unplug_loop(power)
+                self.assertEqual(0, result['code'])
+                self.assertIn('writes=3', result['output'])
+                self.assertNotIn('discharge_polarity=', result['output'])
+
+    def pending_on(self, power):
+        script = function('batt-interface.sh', 'not_charging') + '''
+mkdir battery; echo -250 > battery/current_now; echo -250 > previous
+TMPDIR=$PWD; currFile=battery/current_now; curThen=$PWD/previous
+chargingSwitch=(battery/enable 1 0); battStatusOverride=
+battStatusWorkaround=true; currentIsBattery=true; ampFactor_=1000
+idleThreshold=40; loopDelay=(3 9); flip=on; clock=0; checks=0; statuses=0
+tt() { case "$1" in */current_now) return 0;; *) return 1;; esac; }
+sleep() { clock=$((clock + $1)); }
+read_status() { echo Charging; } # kernel status can lag the actual unplug
+'''
+        if power == 'unplug':
+            script += '''ng_power_state() { checks=$((checks + 1)); [ "$checks" -lt 3 ]; }
+status() { _status=Discharging; return 0; }
+'''
+        else:
+            script += 'ng_power_state() { checks=$((checks + 1)); return ' + str(power) + '; }\n'
+            script += '''status() {
+  statuses=$((statuses + 1)); _status=Discharging
+  [ "$statuses" -lt 3 ] || { _status=Charging; return 1; }
+}
+'''
+        return run(script + 'not_charging || code=$?; printf "code=%s clock=%s status=%s\\n" "${code:-0}" "$clock" "$_status"\n')
+
+    def test_pending_on_verification_stops_when_cable_is_removed(self):
+        self.assertEqual({'code': 0, 'output': 'code=0 clock=3 status=Discharging'},
+                         self.pending_on('unplug'))
+
+    def test_pending_on_keeps_waiting_for_connected_or_unknown_power(self):
+        for power in [0, 2]:
+            with self.subTest(power=power):
+                self.assertEqual({'code': 0, 'output': 'code=1 clock=6 status=Charging'},
+                                 self.pending_on(power))
+
+    def test_known_unplug_is_discharge_before_polarity_is_learned(self):
+        script = ''.join(function('batt-interface.sh', name) + '\n' for name in
+                         ['idle_discharging', 'read_status', 'status', 'not_charging'])
+        script += function('misc-functions.sh', 'tt') + '''
+mkdir battery; echo Discharging > battery/status
+echo -250 > battery/current_now; echo -250 > previous
+TMPDIR=$PWD; currFile=battery/current_now; curThen=$PWD/previous
+battStatus=battery/status; chargingSwitch=(battery/enable 1 0)
+battStatusOverride=; battStatusWorkaround=true; currentIsBattery=true
+dischargePolarity=; ampFactor_=1000; idleThreshold=40; loopDelay=(3 9)
+ng_power_state() { return 1; }
+not_charging || code=$?
+printf 'code=%s status=%s\n' "${code:-0}" "$_status"
+'''
+        self.assertEqual({'code': 0, 'output': 'code=0 status=Discharging'}, run(script))
+
     def test_r_suffix_only_relaxes_thermal_pause_and_never_capacity_pause(self):
         script = ''.join(daemon_function(n) + '\n' for n in ['_lt_pause_cap', '_le_resume_cap']) + '''
 t() { test "$@"; }; tt() { case "$1" in *r) return 0;; *) return 1;; esac; }
