@@ -28,6 +28,14 @@ not_charging() {
   local battStatusWorkaround=${battStatusWorkaround-}
   local power=0
 
+  # Before polarity is learned, relative-current fallback can classify two
+  # negative samples as charging. Confirmed absent input is authoritative.
+  ng_power_state || power=$?
+  if [ "$power" = 1 ]; then
+    _status=Discharging
+    return 0
+  fi
+
   tt "${chargingSwitch[$*]-}" "*\ --" || battStatusOverride=
 
   if ! ${currentIsBattery:-true} || [ -f "$TMPDIR/.current-status-disabled" ] || ! tt "$currFile" "*/current_now"; then battStatusWorkaround=false

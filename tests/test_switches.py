@@ -258,7 +258,7 @@ sleep() { clock=$((clock + $1)); }
 read_status() { echo Charging; } # kernel status can lag the actual unplug
 '''
         if power == 'unplug':
-            script += '''ng_power_state() { checks=$((checks + 1)); [ "$checks" -lt 2 ]; }
+            script += '''ng_power_state() { checks=$((checks + 1)); [ "$checks" -lt 3 ]; }
 status() { _status=Discharging; return 0; }
 '''
         else:
@@ -279,6 +279,22 @@ status() { _status=Discharging; return 0; }
             with self.subTest(power=power):
                 self.assertEqual({'code': 0, 'output': 'code=1 clock=6 status=Charging'},
                                  self.pending_on(power))
+
+    def test_known_unplug_is_discharge_before_polarity_is_learned(self):
+        script = ''.join(function('batt-interface.sh', name) + '\n' for name in
+                         ['idle_discharging', 'read_status', 'status', 'not_charging'])
+        script += function('misc-functions.sh', 'tt') + '''
+mkdir battery; echo Discharging > battery/status
+echo -250 > battery/current_now; echo -250 > previous
+TMPDIR=$PWD; currFile=battery/current_now; curThen=$PWD/previous
+battStatus=battery/status; chargingSwitch=(battery/enable 1 0)
+battStatusOverride=; battStatusWorkaround=true; currentIsBattery=true
+dischargePolarity=; ampFactor_=1000; idleThreshold=40; loopDelay=(3 9)
+ng_power_state() { return 1; }
+not_charging || code=$?
+printf 'code=%s status=%s\n' "${code:-0}" "$_status"
+'''
+        self.assertEqual({'code': 0, 'output': 'code=0 status=Discharging'}, run(script))
 
     def test_r_suffix_only_relaxes_thermal_pause_and_never_capacity_pause(self):
         script = ''.join(daemon_function(n) + '\n' for n in ['_lt_pause_cap', '_le_resume_cap']) + '''

@@ -276,3 +276,9 @@ happens after the request starts, it stops at the next three-second check rather
 than waiting the full 42 seconds. Native battery status may lag and does not
 prove charging after confirmed unplug. Separate fixtures verify that transition
 and retain normal waits for connected/unknown power.
+
+Confirmed disconnected input also overrides relative-current classification
+before polarity is learned. Two negative current samples previously could be
+reported as Charging despite native Discharging status. The new regression
+executes the real status/not_charging helpers with those recorded conditions;
+known unplug remains Discharging while connected/unknown behavior is retained.
